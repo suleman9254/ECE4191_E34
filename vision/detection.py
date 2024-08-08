@@ -6,11 +6,11 @@ class Detector(object):
         self.cfg = cfg
     
     def find_ball(self, frame):
-        hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV) # color masking
+        hsv = cv.cvtColor(frame, cv.COLOR_RGB2HSV) # color masking
         mask = cv.inRange(hsv, self.cfg.hsv_low, self.cfg.hsv_high)
         masked_frame = cv.bitwise_and(frame, frame, mask=mask)
         
-        gray = cv.cvtColor(masked_frame, cv.COLOR_BGR2GRAY)
+        gray = cv.cvtColor(masked_frame, cv.COLOR_RGB2GRAY)
         gray_blurred = cv.GaussianBlur(gray, (self.cfg.gauss_k, self.cfg.gauss_k), self.cfg.gauss_sig)
 
         circles = cv.HoughCircles(gray_blurred, 

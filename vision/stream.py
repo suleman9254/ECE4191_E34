@@ -7,6 +7,7 @@ class Stream(object):
         
         self.host = host
         self.port = port
+        
         self.camera = camera
         self.detector = detector
 
