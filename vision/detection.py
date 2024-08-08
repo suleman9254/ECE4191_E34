@@ -5,7 +5,7 @@ class Detector(object):
     def __init__(self, cfg):
         self.cfg = cfg
     
-    def find_balls(self, frame):
+    def find_ball(self, frame):
         hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV) # color masking
         mask = cv.inRange(hsv, self.cfg.hsv_low, self.cfg.hsv_high)
         masked_frame = cv.bitwise_and(frame, frame, mask=mask)
@@ -22,7 +22,10 @@ class Detector(object):
                                   minRadius=self.cfg.cht_min_r,
                                   maxRadius=self.cfg.cht_max_r)
 
-        return circles[0] if circles is not None else None
+        if circles is not None:
+            circles = np.amax(circles[0], axis=0)
+
+        return circles
 
 class DetectorConfig(object):
     def __init__(self, 
