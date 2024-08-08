@@ -1,6 +1,6 @@
 import math
 
-class Car(object):
+class DiffDriveModel(object):
     def __init__(self, motor_l, motor_r, dt=0.1, wheel_radius=0.05, wheel_sep=0.15):
         
         self.x = 0.0 # x-position
@@ -20,8 +20,8 @@ class Car(object):
     # Veclocity motion model
     def base_velocity(self, wl, wr):
         
-        v = (wl*self.r + wr*self.r) / 2.0
-        w = (wl*self.r - wr*self.r) / self.l
+        v = (-wl*self.r + wr*self.r) / 2.0
+        w = (-wl*self.r - wr*self.r) / self.l
 
         return v, w
     

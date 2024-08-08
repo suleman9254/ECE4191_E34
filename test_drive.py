@@ -1,11 +1,11 @@
-from car import Car
-from motor import Motor
-from controller import PIController
+from navigation.kinematics import DiffDriveModel
+from navigation.motor import Motor
+from navigation.controller import PIController
 
 motor_l = Motor(in1=4, in2=17, enable=27, freq=100, encA=22, encB=5, steps=48, dt=0.1)
 motor_r = Motor(in1=18, in2=23, enable=24, freq=100, encA=25, encB=12, steps=48, dt=0.1)
 
-my_car = Car(motor_l, motor_r, dt=0.1, wheel_radius=0.028, wheel_sep=0.15)
+my_car = DiffDriveModel(motor_l, motor_r, dt=0.1, wheel_radius=0.028, wheel_sep=0.15)
 controller = PIController(Kp=0.1, Ki=0.01, wheel_radius=0.028, wheel_sep=0.15)
 
 for i in range(300):

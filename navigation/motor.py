@@ -31,7 +31,7 @@ class Motor(object):
         else: 
             self.change_direction('anticlockwise')
 
-        self.pwm.value = math.abs(duty)
+        self.pwm.value = abs(duty)
         self.encoder.steps = 0
         time.sleep(self.sense_time)
 
