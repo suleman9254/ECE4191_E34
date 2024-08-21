@@ -21,10 +21,10 @@ class Stream(object):
             
             if circle is not None:
                 circle = np.round(circle).astype("int")
-                (x, y, r) = circle
-
-                cv.circle(frame, (x, y), r, (0, 255, 0), 4)
-                cv.circle(frame, (x, y), 2, (0, 0, 255), 3)
+                
+                for (x, y, r) in circle:
+                    cv.circle(frame, (x, y), r, (0, 255, 0), 4)
+                    cv.circle(frame, (x, y), 2, (0, 0, 255), 3)
             
             _, buffer = cv.imencode('.jpg', frame)
             frame = buffer.tobytes()

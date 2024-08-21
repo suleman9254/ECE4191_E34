@@ -6,11 +6,13 @@ class Detector(object):
         self.cfg = cfg
     
     def find_ball(self, frame):
-        hsv = cv.cvtColor(frame, cv.COLOR_RGB2HSV) # color masking
+        hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV) # color masking
         mask = cv.inRange(hsv, self.cfg.hsv_low, self.cfg.hsv_high)
         masked_frame = cv.bitwise_and(frame, frame, mask=mask)
+
+        cv.imwrite('test.jpg', masked_frame)
         
-        gray = cv.cvtColor(masked_frame, cv.COLOR_RGB2GRAY)
+        gray = cv.cvtColor(masked_frame, cv.COLOR_BGR2GRAY)
         gray_blurred = cv.GaussianBlur(gray, (self.cfg.gauss_k, self.cfg.gauss_k), self.cfg.gauss_sig)
 
         circles = cv.HoughCircles(gray_blurred, 
@@ -22,10 +24,10 @@ class Detector(object):
                                   minRadius=self.cfg.cht_min_r,
                                   maxRadius=self.cfg.cht_max_r)
 
-        if circles is not None:
-            circles = np.amax(circles[0], axis=0)
+        # if circles is not None:
+        #     circles = np.amax(circles[0], axis=0)
 
-        return circles
+        return circles[0] if circles is not None else circles
 
 class DetectorConfig(object):
     def __init__(self, 
@@ -37,8 +39,8 @@ class DetectorConfig(object):
                  cht_max_r=100, 
                  gauss_k=9, 
                  gauss_sig=2, 
-                 hsv_low=[20, 100, 100], 
-                 hsv_high=[30, 255, 255]):
+                 hsv_low=[0, 0, 0], 
+                 hsv_high=[255, 255, 255]):
     
         self.cht_dp = cht_dp
         self.cht_min_d = cht_min_d
