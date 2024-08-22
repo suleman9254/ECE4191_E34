@@ -1,14 +1,7 @@
 from navigation.motor import Motor
-import math
-import time
 
-motor_l = Motor(in1=17, in2=27, enable=22, freq=100, encA=19, encB=26, steps=48, dt=0.5)
-w = motor_l.change_pwm(0.3) 
+max_count = 48 * 75
+motor_l = Motor(in1=17, in2=27, enable=22, freq=100, encA=19, encB=26, max_count=max_count, dt=0.1)
 
-wait = 5
-
-time.sleep(wait)
-rots = w * wait
-
-print(rots)
-
+w = motor_l.change_pwm(0.7) 
+print(w)
