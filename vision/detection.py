@@ -13,7 +13,7 @@ class Detector(object):
         self.hsv_high = np.array(hsv_high)
     
     def find_ball(self, frame):
-        centroids = []
+        centroids, radii = [], []
         
         gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
         gray_blurred = cv.GaussianBlur(gray, (self.k, self.k), self.sig)
@@ -30,9 +30,16 @@ class Detector(object):
         mask = cv.inRange(hsv, self.hsv_low, self.hsv_high)
 
         if circles is not None:
-            for (x, y, r) in circles:
+            for (x, y, r) in circles[0]:
                 if random_sampling_overlap(mask, (x, y), r, 100) > self.overlap:
                     centroids.append([x, y])
+                    radii.append(r)
 
-        centroids = np.array(centroids)
-        return np.mean(centroids) if len(centroids) else centroids
+        if len(centroids):
+            radii = np.array(radii)
+            centroids = np.array(centroids)
+            
+            radii = np.mean(radii, axis=0)
+            centroids = np.mean(centroids, axis=0)
+
+        return centroids, radii

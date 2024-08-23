@@ -10,8 +10,8 @@ def random_sampling_overlap(mask, center, radius, num_samples=100):
     sample_y = center[1] + (radii * np.sin(angles)).astype(int)
     
     # Ensure the sampled points are within the image bounds
-    valid_x = np.clip(sample_x, 0, mask.shape[1] - 1)
-    valid_y = np.clip(sample_y, 0, mask.shape[0] - 1)
+    valid_x = np.clip(sample_x, 0, mask.shape[1] - 1).astype(int)
+    valid_y = np.clip(sample_y, 0, mask.shape[0] - 1).astype(int)
     
     # Check if the sampled points overlap with the mask
     overlap_count = np.count_nonzero(mask[valid_y, valid_x] > 0)
