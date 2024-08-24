@@ -49,37 +49,3 @@ while True:
                 
                 else:
                     robot.drive_to(goal_x=0, goal_y=0, goal_th=0)
-                
-
-
-
-
-
-    
-
-
-
-    frame = camera.read_frame()
-    frame, centroid, r_px = detector.find_ball(frame)
-
-    stream.set_frame(frame)
-
-    if len(centroid):
-        dx, dy, _ = camera.distance(*centroid, r_px, r_cm)
-        goal_x, goal_y = robot.x + dx, robot.y + dy
-        goal_th = atan(dx / dy) + robot.th
-
-        if abs(goal_x) < bounds_x and abs(goal_y) < bounds_y:
-            
-            if dx < max_proximity:
-
-                start_time = time()
-                while start_time - time() < vision_delay:
-                    v, w = planner.plan(goal_x, goal_y, goal_th, robot.x, robot.y, robot.th)
-                    duty_cycle_l, duty_cycle_r = controller.drive(v, w, robot.wl, robot.wr)
-                    robot.pose_update(duty_cycle_l, duty_cycle_r)
-            
-            else:
-
-                goal_x, goal_y, goal_th = 0, 0, 0
-        
