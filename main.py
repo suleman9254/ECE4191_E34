@@ -10,6 +10,7 @@ from navigation.planner import TentaclePlanner
 from system.robot import Robot
 
 from time import time
+from threading import Timer
 
 camera = Camera(cam_idx=0)
 detector = Detector(minDist=50)
@@ -32,21 +33,29 @@ r_cm = 3.35 # cm, ball radius
 bounds_x = 411 # cm
 bounds_y = 640 # cm
 
+def detect_and_collect(interval):
+    while True:
+        goal_x, goal_y, goal_th = robot.find_ball(r_cm, stream)
+
+        if goal_x is not None:
+            if abs(goal_x) < bounds_x:
+                if abs(goal_y) < bounds_y:
+                    
+                    if goal_x - robot.model.x > max_dist:
+                        start_time = time()
+                        while time - start_time < interval:
+                            robot.drive_to(goal_x, goal_y, goal_th)
+                    
+                    else:
+                        robot.drive_home(tolerance=10) # cm
+        
+        else:
+            return None
+        
+detect_routine = Timer(vision_delay, detect_and_collect, args=(vision_delay,))
+
 stream.start()
-
+detect_routine.start()
 while True:
-    goal_x, goal_y, goal_th = robot.find_ball(r_cm, stream)
-
-    if goal_x is not None:
-        if abs(goal_x) < bounds_x:
-            if abs(goal_y) < bounds_y:
-                
-                if goal_x - robot.model.x > max_dist:
-                    start_time = time()
-                    while time - start_time < vision_delay:
-                        robot.drive_to(goal_x, goal_y, goal_th)
-                
-                else:
-                    robot.drive_home(tolerance=10) # cm
+    break
     
-
