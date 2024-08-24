@@ -10,7 +10,6 @@ from navigation.planner import TentaclePlanner
 from system.robot import Robot
 
 from time import time
-from math import atan
 
 camera = Camera(cam_idx=0)
 detector = Detector(minDist=50)
@@ -48,4 +47,6 @@ while True:
                         robot.drive_to(goal_x, goal_y, goal_th)
                 
                 else:
-                    robot.drive_to(goal_x=0, goal_y=0, goal_th=0)
+                    robot.drive_home(tolerance=10) # cm
+    
+

@@ -1,13 +1,3 @@
-from vision.camera import Camera
-from vision.stream import Stream
-from vision.detection import Detector
-
-from navigation.motor import Motor
-from navigation.kinematics import DiffDriveModel
-from navigation.controller import PIController
-from navigation.planner import TentaclePlanner
-
-from time import time
 from math import atan
 
 class Robot(object):
@@ -39,5 +29,18 @@ class Robot(object):
         duty_cycle_l, duty_cycle_r = self.controller.drive(v, w, self.model.wl, self.model.wr)
         self.model.pose_update(duty_cycle_l, duty_cycle_r)
         return None
+    
+    def drive_home(self, tolerance):
+        err_x = abs(self.model.x) - tolerance
+        err_y = abs(self.model.y) - tolerance
+
+        while err_x > 0 or err_y > 0:
+            self.drive_to(goal_x=0, goal_y=0, goal_th=0)
+
+            err_x = abs(self.model.x) - tolerance
+            err_y = abs(self.model.y) - tolerance
+        
+        return None
+
 
     
