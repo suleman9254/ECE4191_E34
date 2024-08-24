@@ -7,7 +7,7 @@ from navigation.kinematics import DiffDriveModel
 from navigation.controller import PIController
 from navigation.planner import TentaclePlanner
 
-from robot import Robot
+from system.robot import Robot
 
 from time import time
 from math import atan
