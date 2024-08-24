@@ -32,8 +32,7 @@ class Motor(object):
             self.change_direction('anticlockwise')
 
         self.pwm.value = abs(duty)
-        w = self.read_velocity(self.dt)    
-        return w
+        return self.read_velocity(self.dt)    
     
     def read_velocity(self, dt):
         self.enc.steps = 0

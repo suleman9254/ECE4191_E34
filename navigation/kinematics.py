@@ -37,4 +37,4 @@ class DiffDriveModel(object):
         self.y = self.y + self.dt*v*math.sin(self.th)
         self.th = self.th + w*self.dt
 
-        return self.x, self.y, self.th
+        return self.x, self.y, self.th, self.wl, self.wr
