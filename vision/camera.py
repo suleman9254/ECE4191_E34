@@ -25,8 +25,11 @@ class Camera(object):
         
         return frame
     
+    def undistort(self, frame):
+        return cv.undistort(frame, self.matrix, self.dist_coeffs)
+    
     def distance(self, u, v, r_px, r_cm):
-        z = self.matrix[0, 0] * r_cm / r_px
-        x = (u - self.matrix[0, 2]) * (z / self.matrix[0, 0])
-        y = (v - self.matrix[1, 2]) * (z / self.matrix[1, 1])
-        return x, y, z
+        y = self.matrix[0, 0] * r_cm / r_px
+        x = (u - self.matrix[0, 2]) * (y / self.matrix[0, 0])
+        h = -(v - self.matrix[1, 2]) * (y / self.matrix[1, 1])
+        return x, y, h
