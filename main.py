@@ -27,9 +27,9 @@ planner = TentaclePlanner(dt=0.1, steps=5, alpha=1, beta=0.1)
 robot = Robot(camera, detector, model, controller, planner)
 
 vision_delay = 2 # secs
-max_dist = 0.05
-r_m = 0.0335 # ball radius
-bounds_x = 4.11
+max_dist = 0
+r_m = 0.0325 # ball radius
+bounds_x =  4.11
 bounds_y = 6.40
 
 def detect_and_collect(interval, stream=None):
@@ -40,10 +40,11 @@ def detect_and_collect(interval, stream=None):
             stream.set_frame(frame)
 
         if goal_x is not None:
+
             if abs(goal_x) < bounds_x:
                 if abs(goal_y) < bounds_y:
                     
-                    if goal_x - robot.model.x > max_dist:
+                    if abs(goal_x - robot.model.x) > max_dist:
                         
                         robot.drive_for_time(goal_x, goal_y, goal_th, dur=interval)
                     
@@ -52,8 +53,8 @@ def detect_and_collect(interval, stream=None):
         
     return None
 
-stream.start()        
-detect_and_collect(interval=vision_delay, stream=stream)
+detect_and_collect(interval=vision_delay)
+# stream.start()        
 
 # detect_routine = Timer(vision_delay, 
 #                        detect_and_collect, 

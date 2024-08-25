@@ -8,14 +8,14 @@ class Camera(object):
             raise Exception("Error: Could not open camera.")
 
         self.matrix = np.array([[1.38133202e+03, 0.00000000e+00, 7.70244844e+02],
-                                [0.00000000e+00, 1.38658277e+03, 3.70361810e+02],
+                                [0.00000000e+00, 1.38658277e+03, 3.70361811e+02],
                                 [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]])
         
-        self.dist_coeffs = np.array([[-2.69619389e-01, 
-                                      -8.26450158e-01, 
-                                      -1.65810416e-03, 
-                                      -7.42041136e-03, 
-                                      6.46280809e+00]])
+        self.dist_coeffs = np.array([[-2.69619382e-01, 
+                                      -8.26450256e-01, 
+                                      -1.65810414e-03, 
+                                      -7.42041123e-03,
+                                      6.46280851e+00]])
     
     def read_frame(self):
         success, frame = self.camera.read()

@@ -42,7 +42,7 @@ class Robot(object):
 
     def drive_for_time(self, goal_x, goal_y, goal_th, dur):
         start_time = time()
-        while time - start_time < dur:
+        while time() - start_time < dur:
             self.drive_step(goal_x, goal_y, goal_th)
         
         return None
