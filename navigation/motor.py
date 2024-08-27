@@ -1,6 +1,7 @@
 import gpiozero
 import time
 import math
+import atexit
 
 class Motor(object):
     def __init__(self, in1, in2, enable, freq, encA, encB, max_count):
@@ -10,7 +11,15 @@ class Motor(object):
         self.in2 = gpiozero.OutputDevice(pin=in2)
         self.pwm = gpiozero.PWMOutputDevice(pin=enable, frequency=freq)
         self.enc = gpiozero.RotaryEncoder(a=encA, b=encB, max_steps=0)
+
+        atexit.register(self.release)
     
+    def release(self):
+        self.in1.close()
+        self.in2.close()
+        self.pwm.close()
+        self.enc.close()
+
     def change_direction(self, dir):
         if dir == True:
             self.in1.on()

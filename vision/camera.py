@@ -1,5 +1,6 @@
 import cv2 as cv
 import numpy as np
+import atexit
 
 class Camera(object):
     def __init__(self, cam_idx=0):
@@ -10,6 +11,8 @@ class Camera(object):
         self.matrix = np.load('vision/params/camera_matrix.npy')
         self.dist_coeffs = np.load('vision/params/distortion.npy')
         self.square_size = np.load('vision/params/square_size.npy')
+
+        atexit.register(self.release)
     
     def read_frame(self):
         success, frame = self.camera.read()
@@ -18,6 +21,9 @@ class Camera(object):
             raise Exception("Error: Could not read frame.")
         
         return cv.flip(frame, 0) # vertical
+    
+    def release(self):
+        self.camera.release()
     
     def undistort(self, frame):
         return cv.undistort(frame, self.matrix, self.dist_coeffs)
