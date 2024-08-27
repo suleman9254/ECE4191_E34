@@ -42,11 +42,11 @@ class Detector(object):
             radii = np.mean(radii, axis=0)
             centroids = np.mean(centroids, axis=0)
 
-            # self.draw_circle(frame, centroids, radii)
+            self.draw_circle(frame, centroids.astype(int), radii.astype(int))
 
         return frame, centroids, radii
     
     def draw_circle(self, frame, centroid, radius):
-        cv.circle(frame, centroid, radius, (0, 255, 0), 4)
-        cv.circle(frame, centroid, 2, (0, 0, 255), 3)
+        cv.circle(frame, (int(centroid[0]), int(centroid[1])), int(radius), (0, 255, 0), 4)
+        cv.circle(frame, (int(centroid[0]), int(centroid[1])), 2, (0, 0, 255), 3)
         return None
