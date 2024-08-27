@@ -3,8 +3,7 @@ import time
 import math
 
 class Motor(object):
-    def __init__(self, in1, in2, enable, freq, encA, encB, max_count, dt):
-        self.dt = dt
+    def __init__(self, in1, in2, enable, freq, encA, encB, max_count):
         self.max_count = max_count
 
         self.in1 = gpiozero.OutputDevice(pin=in1)
@@ -13,26 +12,23 @@ class Motor(object):
         self.enc = gpiozero.RotaryEncoder(a=encA, b=encB, max_steps=0)
     
     def change_direction(self, dir):
-        if dir == 'off':
-            self.in1.off()
-            self.in2.off()
-
-        elif dir == 'clockwise':
+        if dir == True:
             self.in1.on()
             self.in2.off()
         
-        elif dir == 'anticlockwise':
+        elif dir == False:
+            self.in1.on()
+            self.in2.off()
+        
+        else:
             self.in1.off()
-            self.in2.on()
+            self.in2.off()
     
-    def change_pwm(self, duty):
-        if duty >= 0:
-            self.change_direction('clockwise') 
-        else: 
-            self.change_direction('anticlockwise')
-
+    def change_pwm(self, duty, dt=None):
+        self.change_direction(duty > 0)
         self.pwm.value = abs(duty)
-        return self.read_velocity(self.dt)    
+        w = self.read_velocity(dt) if dt > 0 else 0
+        return w
     
     def read_velocity(self, dt):
         self.enc.steps = 0

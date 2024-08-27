@@ -28,8 +28,8 @@ class DiffDriveModel(object):
     # Kinematic motion model
     def pose_update(self, duty_cycle_l, duty_cycle_r):
 
-        self.wl = self.left_motor.change_pwm(duty_cycle_l)
-        self.wr = self.right_motor.change_pwm(duty_cycle_r)
+        self.wl = self.left_motor.change_pwm(duty_cycle_l, self.dt)
+        self.wr = self.right_motor.change_pwm(duty_cycle_r, self.dt)
         
         v, w = self.base_velocity(self.wl, self.wr)
         
