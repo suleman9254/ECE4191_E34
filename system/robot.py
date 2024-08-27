@@ -12,6 +12,8 @@ class Robot(object):
     
     def find_ball(self, r_m):
         frame = self.camera.read_frame()
+        frame = self.camera.undistort(frame) # undistort before detect
+
         frame, centroid, r_px = self.detector.find_ball(frame)
         goal_x, goal_y, goal_th = None, None, None
 
@@ -27,23 +29,30 @@ class Robot(object):
         duty_cycle_l, duty_cycle_r = self.controller.drive(v, w, self.model.wl, self.model.wr)
         self.model.pose_update(duty_cycle_l, duty_cycle_r)
         return None
-    
-    def drive_to_pos(self, goal_x, goal_y, goal_th, tolerance):
-        err_x = abs(self.model.x - goal_x)
-        err_y = abs(self.model.y - goal_y)
 
-        while err_x > tolerance or err_y > tolerance:
-            self.drive_step(goal_x, goal_y, goal_th)
+    def detect_collect(self, r_m, bounds_x, bounds_y, max_dist, drive_duration, home_tolerance):
+        while True:
+            _, goal_x, goal_y, goal_th = self.find_ball(r_m)
 
-            err_x = abs(self.model.x - goal_x)
-            err_y = abs(self.model.y - goal_y)
+            if goal_x is not None:
+
+                if abs(goal_x) < bounds_x:
+                    if abs(goal_y) < bounds_y:
+                        
+                        if abs(goal_x - self.model.x) > max_dist:
+                        
+                            start_time = time()
+                            while time() - start_time < drive_duration:
+                                self.drive_step(goal_x, goal_y, goal_th)
+                            
+                            self.model.pose_update(duty_cycle_l=0, duty_cycle_r=0)
+                        
+                        else:
+                            
+                            while abs(self.model.x) > home_tolerance or \
+                                    abs(self.model.y) > home_tolerance:
+                                self.drive_step(goal_x=0, goal_y=0, goal_th=0)
+
+                            self.model.pose_update(duty_cycle_l=0, duty_cycle_r=0)
         
         return None
-
-    def drive_for_time(self, goal_x, goal_y, goal_th, dur):
-        start_time = time()
-        while time() - start_time < dur:
-            self.drive_step(goal_x, goal_y, goal_th)
-        
-        return None
-    
