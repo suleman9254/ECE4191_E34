@@ -1,6 +1,7 @@
 from math import atan
-from time import time
+from time import time, sleep
 import numpy as np
+from threading import Thread
 
 class Robot(object):
     def __init__(self, camera, detector, model, controller, planner):
@@ -55,6 +56,12 @@ class Robot(object):
                                 self.drive_step(goal_x=0, goal_y=0, goal_th=0)
 
                             self.model.pose_update(duty_cycle_l=0, duty_cycle_r=0)
+                            
+                            return None
+            
+            else:
+                sleep(drive_duration)
+
         return None
     
     def spiral_explore(self, x_center, y_center, separation, spirals, resolution, tolerance):
