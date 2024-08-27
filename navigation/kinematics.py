@@ -20,8 +20,8 @@ class DiffDriveModel(object):
     # Veclocity motion model
     def base_velocity(self, wl, wr):
         
-        v = (-wl*self.r + wr*self.r) / 2.0
-        w = (-wl*self.r - wr*self.r) / self.l
+        v = (wl*self.r - wr*self.r) / 2.0
+        w = (wl*self.r + wr*self.r) / self.l
 
         return v, w
     

@@ -17,8 +17,8 @@ class PIController(object):
         
     def drive(self, v_desired, w_desired, wl, wr):
         
-        wl_desired = -(v_desired + self.l*w_desired / 2) / self.r
-        wr_desired = (v_desired - self.l*w_desired / 2) / self.r
+        wl_desired = (v_desired + self.l*w_desired / 2) / self.r
+        wr_desired = -(v_desired - self.l*w_desired / 2) / self.r
         
         duty_cycle_l, self.e_sum_l = self.p_control(wl_desired, wl, self.e_sum_l)
         duty_cycle_r, self.e_sum_r = self.p_control(wr_desired, wr, self.e_sum_r)
