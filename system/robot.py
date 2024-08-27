@@ -58,24 +58,3 @@ class Robot(object):
                             self.model.pose_update(duty_cycle_l=0, duty_cycle_r=0)
                             
                             return None
-            
-            else:
-                sleep(drive_duration)
-
-        return None
-    
-    def spiral_explore(self, x_center, y_center, separation, spirals, resolution, tolerance):
-        th = np.linspace(0, spirals * 2 * np.pi, resolution)
-        radii = separation * th / (2 * np.pi)
-
-        x_vec = x_center + radii * np.cos(th)
-        y_vec = y_center + radii * np.sin(th)
-
-        for goal_x, goal_y, goal_th in zip(x_vec, y_vec, th):
-            while abs(self.model.x - goal_x) > tolerance or \
-                    abs(self.model.y - goal_y) > tolerance:
-                
-                self.drive_step(goal_x, goal_y, goal_th)
-
-        self.model.pose_update(duty_cycle_l=0, duty_cycle_r=0)
-        return None
