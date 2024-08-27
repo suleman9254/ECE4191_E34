@@ -17,7 +17,7 @@ class Camera(object):
         if not success:
             raise Exception("Error: Could not read frame.")
         
-        return frame
+        return cv.flip(frame, 0) # vertical
     
     def undistort(self, frame):
         return cv.undistort(frame, self.matrix, self.dist_coeffs)
