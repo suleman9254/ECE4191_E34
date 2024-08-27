@@ -7,15 +7,9 @@ class Camera(object):
         if not self.camera.isOpened():
             raise Exception("Error: Could not open camera.")
 
-        self.matrix = np.array([[1.38133202e+03, 0.00000000e+00, 7.70244844e+02],
-                                [0.00000000e+00, 1.38658277e+03, 3.70361811e+02],
-                                [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]])
-        
-        self.dist_coeffs = np.array([[-2.69619382e-01, 
-                                      -8.26450256e-01, 
-                                      -1.65810414e-03, 
-                                      -7.42041123e-03,
-                                      6.46280851e+00]])
+        self.matrix = np.load('vision/params/camera_matrix.npy')
+        self.dist_coeffs = np.load('vision/params/distortion.npy')
+        self.square_size = np.load('vision/params/square_size.npy')
     
     def read_frame(self):
         success, frame = self.camera.read()
@@ -29,7 +23,7 @@ class Camera(object):
         return cv.undistort(frame, self.matrix, self.dist_coeffs)
     
     def distance(self, u, v, r_px, r_m):
-        y = self.matrix[0, 0] * r_m / r_px
-        x = (u - self.matrix[0, 2]) * (y / self.matrix[0, 0])
-        h = -(v - self.matrix[1, 2]) * (y / self.matrix[1, 1])
+        y = self.square_size * self.matrix[0, 0] * r_m / r_px
+        x = self.square_size * (u - self.matrix[0, 2]) * (y / self.matrix[0, 0])
+        h = self.square_size * -(v - self.matrix[1, 2]) * (y / self.matrix[1, 1])
         return x, y, h
