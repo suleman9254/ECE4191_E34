@@ -1,5 +1,6 @@
 from math import atan
 from time import time
+import numpy as np
 
 class Robot(object):
     def __init__(self, camera, detector, model, controller, planner):
@@ -36,8 +37,8 @@ class Robot(object):
 
             if goal_x is not None:
 
-                if abs(goal_x) < bounds_x:
-                    if abs(goal_y) < bounds_y:
+                if abs(goal_x) < bounds_x and \
+                        abs(goal_y) < bounds_y:
                         
                         if abs(goal_x - self.model.x) > max_dist:
                         
@@ -54,5 +55,20 @@ class Robot(object):
                                 self.drive_step(goal_x=0, goal_y=0, goal_th=0)
 
                             self.model.pose_update(duty_cycle_l=0, duty_cycle_r=0)
-        
+        return None
+    
+    def spiral_explore(self, x_center, y_center, separation, spirals, resolution, tolerance):
+        th = np.linspace(0, spirals * 2 * np.pi, resolution)
+        radii = separation * th / (2 * np.pi)
+
+        x_vec = x_center + radii * np.cos(th)
+        y_vec = y_center + radii * np.sin(th)
+
+        for goal_x, goal_y, goal_th in zip(x_vec, y_vec, th):
+            while abs(self.model.x - goal_x) > tolerance or \
+                    abs(self.model.y - goal_y) > tolerance:
+                
+                self.drive_step(goal_x, goal_y, goal_th)
+
+        self.model.pose_update(duty_cycle_l=0, duty_cycle_r=0)
         return None
