@@ -10,7 +10,7 @@ square_size = 0.028 # meters
 
 # Prepare object points based on the size of the chessboard squares
 objp = np.zeros((6*7, 3), np.float32)
-objp[:, :2] = np.mgrid[0:7, 0:6].T.reshape(-1, 2)
+objp[:, :2] = np.mgrid[0:7, 0:6].T.reshape(-1, 2) * square_size
 
 # Arrays to store object points and image points from all the images
 objpoints = []  # 3d point in real world space
@@ -35,6 +35,5 @@ for fname in images:
 # Calibrate the camera
 ret, mtx, dist, rvecs, tvecs = cv.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
 
-np.save('vision/params/square_size.npy', square_size)
 np.save('vision/params/camera_matrix.npy', mtx)
 np.save('vision/params/distortion.npy', dist)
