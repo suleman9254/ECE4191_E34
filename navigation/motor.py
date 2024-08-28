@@ -26,8 +26,8 @@ class Motor(object):
             self.in2.off()
         
         elif dir == False:
-            self.in1.on()
-            self.in2.off()
+            self.in1.off()
+            self.in2.on()
         
         else:
             self.in1.off()
@@ -42,7 +42,11 @@ class Motor(object):
     def read_velocity(self, dt):
         self.enc.steps = 0
         time.sleep(dt)
+        self.pwm.value = 0
         rots = 4 * self.enc.steps / self.max_count
+
+        print(rots)
+
         w = 2 * math.pi * rots / dt
         return w
 
