@@ -12,6 +12,8 @@ class Motor(object):
         self.pwm = gpiozero.PWMOutputDevice(pin=enable, frequency=freq)
         self.enc = gpiozero.RotaryEncoder(a=encA, b=encB, max_steps=0)
 
+        self.direction = None
+
         atexit.register(self.release)
     
     def release(self):
@@ -34,7 +36,11 @@ class Motor(object):
             self.in2.off()
     
     def change_pwm(self, duty, dt=None):
-        self.change_direction(duty > 0)
+        desired_direction = duty > 0
+        if desired_direction != self.direction:
+            self.change_direction(desired_direction)
+            self.direction = desired_direction
+
         self.pwm.value = abs(duty)
         w = self.read_velocity(dt) if dt > 0 else 0
         return w
@@ -42,11 +48,7 @@ class Motor(object):
     def read_velocity(self, dt):
         self.enc.steps = 0
         time.sleep(dt)
-        self.pwm.value = 0
         rots = 4 * self.enc.steps / self.max_count
-
-        print(rots)
-
         w = 2 * math.pi * rots / dt
         return w
 

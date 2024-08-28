@@ -9,14 +9,14 @@ class TentaclePlanner:
         self.alpha = alpha
         self.steps = steps
         
-        self.tentacles = [(0.0,0.5),
-                          (0.0,-0.5),
-                          (0.1,1.0),
-                          (0.1,-1.0),
-                          (0.1,0.5),
-                          (0.1,-0.5),
-                          (0.1,0.0),
-                          (0.0,0.0)]
+        self.tentacles = [(0.0, 0.5),
+                          (0.0, -0.5),
+                          (0.1, 1.0),
+                          (0.1, -1.0),
+                          (0.1, 0.5),
+                          (0.1, -0.5),
+                          (0.1, 0.0), 
+                          (0, 0)]
     
     def roll_out(self, v, w, goal_x, goal_y, goal_th, x, y, th):
         
@@ -40,5 +40,4 @@ class TentaclePlanner:
             costs.append(dist)
         
         best_idx = np.argmin(costs)
-        
         return self.tentacles[best_idx]
