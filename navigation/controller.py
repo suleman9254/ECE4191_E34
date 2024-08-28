@@ -1,5 +1,5 @@
 class PIController(object):
-    def __init__(self,Kp=0.1,Ki=0.01,wheel_radius=0.02, wheel_sep=0.1):
+    def __init__(self, Kp=0.1, Ki=0.01, wheel_radius=0.02, wheel_sep=0.1):
         
         self.Kp = Kp
         self.Ki = Ki
@@ -16,7 +16,6 @@ class PIController(object):
         return duty_cycle, e_sum
         
     def drive(self, v_desired, w_desired, wl, wr):
-        
         wl_desired = (v_desired + self.l*w_desired / 2) / self.r
         wr_desired = -(v_desired - self.l*w_desired / 2) / self.r
         
