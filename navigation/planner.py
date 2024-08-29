@@ -2,22 +2,17 @@ import math
 import numpy as np
 
 class TentaclePlanner:
-    def __init__(self, dt=0.1, steps=5, alpha=1, beta=0.1):
-
+    def __init__(self, v, w, dt=0.1, steps=5, alpha=1, beta=0.1):
+        
         self.dt = dt
         self.beta = beta
         self.alpha = alpha
         self.steps = steps
         
-        self.tentacles = [(0.0, 0.5),
-                          (0.0, -0.5),
-                          (0.1, 1.0),
-                          (0.1, -1.0),
-                          (0.1, 0.5),
-                          (0.1, -0.5),
-                          (0.1, 0.0), 
-                          (0, 0)]
-    
+        self.tentacles = np.meshgrid(v, w)
+        self.tentacles = np.array(self.tentacles)
+        self.tentacles = self.tentacles.T.reshape(-1, 2)
+
     def roll_out(self, v, w, goal_x, goal_y, goal_th, x, y, th):
         
         for _ in range(self.steps):
@@ -32,8 +27,7 @@ class TentaclePlanner:
         
         return self.alpha*e_xy + self.beta*e_th
     
-    def plan(self, goal_x, goal_y, goal_th, x, y, th):
-        
+    def plan(self, goal_x, goal_y, goal_th, x, y, th):        
         costs =[]
         for v, w in self.tentacles:
             dist = self.roll_out(v, w, goal_x, goal_y, goal_th, x, y, th)

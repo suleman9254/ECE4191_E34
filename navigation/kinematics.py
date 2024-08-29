@@ -1,7 +1,8 @@
+import time
 import math
 
 class DiffDriveModel(object):
-    def __init__(self, motor_l, motor_r, dt_motion=0.1, dt_enc=0.04, wheel_radius=0.05, wheel_sep=0.15):
+    def __init__(self, motor_l, motor_r, wheel_radius=0.05, wheel_sep=0.15, dt=0.08, encoder_delay=0.04):
         
         self.x = 0.0 # x-position
         self.y = 0.0 # y-position 
@@ -12,11 +13,12 @@ class DiffDriveModel(object):
         
         self.r = wheel_radius
         self.l = wheel_sep
-        self.dtE = dt_enc
-        self.dtM = dt_motion
+        self.dt = dt
 
         self.right_motor = motor_r
         self.left_motor = motor_l
+
+        self.encoder_delay = encoder_delay
     
     # Veclocity motion model
     def base_velocity(self, wl, wr):
@@ -29,13 +31,13 @@ class DiffDriveModel(object):
     # Kinematic motion model
     def pose_update(self, duty_cycle_l, duty_cycle_r):
 
-        self.wl = self.left_motor.change_pwm(duty_cycle_l, dt=self.dtE)
-        self.wr = self.right_motor.change_pwm(duty_cycle_r, dt=self.dtE)
+        self.wl = self.left_motor.change_pwm(duty_cycle_l, self.encoder_delay)
+        self.wr = self.right_motor.change_pwm(duty_cycle_r, self.encoder_delay)
         
         v, w = self.base_velocity(self.wl, self.wr)
+                
+        self.x = self.x + self.dt*v*math.cos(self.th)
+        self.y = self.y + self.dt*v*math.sin(self.th)
+        self.th = self.th + w*self.dt
         
-        self.x = self.x + self.dtM*v*math.cos(self.th)
-        self.y = self.y + self.dtM*v*math.sin(self.th)
-        self.th = self.th + w*self.dtM
-
         return self.x, self.y, self.th, self.wl, self.wr
