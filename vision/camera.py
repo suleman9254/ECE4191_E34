@@ -1,5 +1,7 @@
 import cv2 as cv
 import numpy as np
+from math import asin
+
 import atexit
 
 class Camera(object):
@@ -15,7 +17,6 @@ class Camera(object):
     
     def read_frame(self):
         success, frame = self.camera.read()
-
         if not success:
             raise Exception("Error: Could not read frame.")
         
@@ -30,7 +31,6 @@ class Camera(object):
         return cv.undistort(frame, self.matrix, self.dist_coeffs)
     
     def distance(self, u, v, r_px, r_m):
-        x = self.matrix[0, 0] * r_m / r_px
-        y = (u - self.matrix[0, 2]) * (x / self.matrix[0, 0])
-        h = -(v - self.matrix[1, 2]) * (x / self.matrix[1, 1])
-        return x, h, y
+        d = self.matrix[0, 0] * r_m / r_px
+        y = (u - self.matrix[0, 2]) * (r_m / r_px)
+        return d, asin(y / d)
