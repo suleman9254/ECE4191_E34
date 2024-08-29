@@ -14,6 +14,7 @@ class Camera(object):
         self.dist_coeffs = np.load('vision/params/distortion.npy')
 
         atexit.register(self.release)
+        self.camera.set(cv.CAP_PROP_BUFFERSIZE, 1)
     
     def read_frame(self):
         success, frame = self.camera.read()
