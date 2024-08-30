@@ -1,3 +1,4 @@
+from utils.utils import sign
 from math import pi, cos, sin, atan2
 
 class Robot(object):
@@ -27,39 +28,41 @@ class Robot(object):
         
         if len(centroid):
             dist, th = self.camera.distance(*centroid, r_px, r_m)
-            x = dist * cos(th) + self.model.x
+            x = sign(self.model.x) * dist * cos(th) + self.model.x
             y = dist * sin(th) + self.model.y
         
         return dist, th, x, y
     
-    def collect(self, r_m, xbound, ybound, too_close, alpha):
+    def collect(self, r_m, xbound, ybound, too_close, alpha, beta):
         dist, th, x, y = self.vision(r_m)
+        
         if dist is not None:
-            if dist < too_close:
+            if dist > too_close:
                 if abs(x) < xbound and abs(y) < ybound:
 
-                    goal_th = self.model.th + th
-                    goal_x = self.model.x + dist * alpha
-                    
+                    goal_th = self.model.th + th * beta
+                    goal_x = sign(self.model.x) * alpha * dist * cos(th) + self.model.x
+
                     self.drive(self.model.x, self.model.y, goal_th)
+
+                    print('Hello')
                     self.drive(goal_x, self.model.y, self.model.th)
+                    print('bye bye')
 
                     return True
             else:
                 
-                goal_x, goal_y = 0, 0
                 goal_th = atan2(-self.model.y, -self.model.x)
-
                 self.drive(self.model.x, self.model.y, goal_th)
-                self.drive(goal_x, goal_y, self.model.th)
+                self.drive(goal_x=0, goal_y=0, goal_th=goal_th)
 
         return False
     
-    def start(self, r_m, alpha, xbound, ybound, too_close):
-        th, dth = 0, 0.785
+    def start(self, r_m, alpha, beta, xbound, ybound, too_close):
+        th, dth = 0, 0.785*2
 
         while True:
-            detected = self.collect(r_m, xbound, ybound, too_close, alpha)
+            detected = self.collect(r_m, xbound, ybound, too_close, alpha, beta)
 
             if not detected:
                 goal_th = self.model.th + dth
