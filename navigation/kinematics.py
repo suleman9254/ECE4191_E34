@@ -10,6 +10,9 @@ class DiffDriveModel(object):
         
         self.wl = 0.0 # rotational velocity left wheel
         self.wr = 0.0 # rotational velocity right wheel
+
+        self.v = 0.0 # forward velocity
+        self.w = 0.0 # angular velocity
         
         self.r = wheel_radius
         self.l = wheel_sep
@@ -21,29 +24,25 @@ class DiffDriveModel(object):
         self.encoder_delay = encoder_delay
     
     # Veclocity motion model
-    def base_velocity(self, wl, wr):
+    def update_velocity(self):
         
-        v = (wl*self.r - wr*self.r) / 2.0
-        w = (wl*self.r + wr*self.r) / self.l
-
-        return v, w
+        self.wl = self.left_motor.read_velocity(self.encoder_delay)
+        self.wr = self.right_motor.read_velocity(self.encoder_delay)
+        
+        self.v = (self.wl*self.r - self.wr*self.r) / 2.0
+        self.w = (self.wl*self.r + self.wr*self.r) / self.l
     
     def change_pwm(self, duty_cycle_l, duty_cycle_r):
         
         self.left_motor.change_pwm(duty_cycle_l)
         self.right_motor.change_pwm(duty_cycle_r)
 
-        self.wl = self.left_motor.read_velocity(self.encoder_delay)
-        self.wr = self.right_motor.read_velocity(self.encoder_delay)
-
     # Kinematic motion model
     def pose_update(self, duty_cycle_l, duty_cycle_r):
         
         self.change_pwm(duty_cycle_l, duty_cycle_r)
-        v, w = self.base_velocity(self.wl, self.wr)
+        self.update_velocity()
                 
-        self.x = self.x + self.dt*v*math.cos(self.th)
-        self.y = self.y + self.dt*v*math.sin(self.th)
-        self.th = self.th + w*self.dt
-        
-        return self.x, self.y, self.th, self.wl, self.wr
+        self.x = self.x + self.dt*self.v*math.cos(self.th)
+        self.y = self.y + self.dt*self.v*math.sin(self.th)
+        self.th = self.th + self.w*self.dt
