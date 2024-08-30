@@ -28,12 +28,18 @@ class DiffDriveModel(object):
 
         return v, w
     
+    def change_pwm(self, duty_cycle_l, duty_cycle_r):
+        
+        self.left_motor.change_pwm(duty_cycle_l)
+        self.right_motor.change_pwm(duty_cycle_r)
+
+        self.wl = self.left_motor.read_velocity(self.encoder_delay)
+        self.wr = self.right_motor.read_velocity(self.encoder_delay)
+
     # Kinematic motion model
     def pose_update(self, duty_cycle_l, duty_cycle_r):
-
-        self.wl = self.left_motor.change_pwm(duty_cycle_l, self.encoder_delay)
-        self.wr = self.right_motor.change_pwm(duty_cycle_r, self.encoder_delay)
         
+        self.change_pwm(duty_cycle_l, duty_cycle_r)
         v, w = self.base_velocity(self.wl, self.wr)
                 
         self.x = self.x + self.dt*v*math.cos(self.th)

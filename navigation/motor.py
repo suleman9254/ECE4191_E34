@@ -36,14 +36,12 @@ class Motor(object):
             self.in1.off()
             self.in2.off()
     
-    def change_pwm(self, duty, dt=None):
+    def change_pwm(self, duty):
         desired_direction = duty > 0
         if desired_direction != self.dir:
             self.change_direction(desired_direction)
 
         self.pwm.value = abs(duty)
-        w = 0 if dt is None else self.read_velocity(dt)
-        return w
     
     def read_velocity(self, dt):
         self.enc.steps = 0
