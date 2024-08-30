@@ -46,6 +46,7 @@ class Robot(object):
 
                     return True
             else:
+                
                 goal_x, goal_y = 0, 0
                 goal_th = atan2(-self.model.y, -self.model.x)
 
