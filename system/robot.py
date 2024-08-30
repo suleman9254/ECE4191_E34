@@ -32,28 +32,38 @@ class Robot(object):
         
         return dist, th, x, y
     
-    def collect(self, r_m, alpha, xbound, ybound, too_close):
-        while True:
-            
-            dist, th, x, y = self.vision(r_m)
-            if dist is not None:
-                if dist < too_close:
-                    if abs(x) < xbound and abs(y) < ybound:
+    def collect(self, r_m, xbound, ybound, too_close, alpha):
+        dist, th, x, y = self.vision(r_m)
+        if dist is not None:
+            if dist < too_close:
+                if abs(x) < xbound and abs(y) < ybound:
 
-                        goal_th = self.model.th + th * alpha
-                        goal_x = self.model.x + dist * alpha
-                        
-                        self.drive(self.model.x, self.model.y, goal_th)
-                        self.drive(goal_x, self.model.y, self.model.th)
-                
-                else:
-                    goal_th = atan2(-self.model.y, -self.model.x)
-                    goal_x, goal_y = 0, 0
-
+                    goal_th = self.model.th + th
+                    goal_x = self.model.x + dist * alpha
+                    
                     self.drive(self.model.x, self.model.y, goal_th)
-                    self.drive(goal_x, goal_y, self.model.th)
+                    self.drive(goal_x, self.model.y, self.model.th)
 
+                    return True
             else:
-                
-                goal_th = self.model.th + 0.1
+                goal_x, goal_y = 0, 0
+                goal_th = atan2(-self.model.y, -self.model.x)
+
                 self.drive(self.model.x, self.model.y, goal_th)
+                self.drive(goal_x, goal_y, self.model.th)
+
+        return False
+    
+    def start(self, r_m, alpha, xbound, ybound, too_close):
+        th, dth = 0, 0.785
+
+        while True:
+            detected = self.collect(r_m, xbound, ybound, too_close, alpha)
+
+            if not detected:
+                goal_th = self.model.th + dth
+                self.drive(self.model.x, self.model.y, goal_th)
+
+                th = th + dth
+                if th > 2*pi:
+                    dth, th = dth / 2, 0
