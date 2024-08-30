@@ -1,32 +1,43 @@
+from threading import Thread
+from queue import Queue
+
 import cv2 as cv
 import numpy as np
-from math import asin
 
 import atexit
+from math import asin
 
 class Camera(object):
     def __init__(self, cam_idx=0):
+        
         self.camera = cv.VideoCapture(cam_idx)
         if not self.camera.isOpened():
             raise Exception("Error: Could not open camera.")
-
+        
         self.matrix = np.load('vision/params/camera_matrix.npy')
         self.dist_coeffs = np.load('vision/params/distortion.npy')
+        
+        self.queue = Queue()
+        thread = Thread(target=self._reader)
+        thread.daemon = True
+        thread.start()
+    
+    def _reader(self):
+        while True:
+            success, frame = self.camera.read()
+            if not success:
+                raise Exception("Error: Could not read frame.")
+            
+            if not self.queue.empty():
+                self.queue.get_nowait()
 
-        atexit.register(self.release)
-        self.camera.set(cv.CAP_PROP_BUFFERSIZE, 1)
+            self.queue.put(frame)
     
     def read_frame(self):
-        success, frame = self.camera.read()
-        if not success:
-            raise Exception("Error: Could not read frame.")
-        
+        frame = self.queue.get()
         frame = cv.flip(frame, 0) # vertical
         frame =  cv.flip(frame, 1) # horizontal
         return frame
-    
-    def release(self):
-        self.camera.release()
     
     def undistort(self, frame):
         return cv.undistort(frame, self.matrix, self.dist_coeffs)
