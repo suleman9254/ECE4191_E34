@@ -1,4 +1,3 @@
-from utils.utils import sign
 from math import pi, cos, sin, atan2
 
 class Robot(object):
@@ -19,9 +18,18 @@ class Robot(object):
         
         self.model.pose_update(0, 0)
 
+    def transform(self, dist, th, alpha=1, beta=1):
+        dist, th = alpha * dist, beta * th
+        local_x, local_y = dist * cos(th), dist * sin(th)
+
+        global_x = self.model.x + local_x * cos(self.model.th) - local_y * sin(self.model.th)
+        global_y = self.model.y + local_x * sin(self.model.th) + local_y * cos(self.model.th)
+        
+        global_th = self.model.th + th
+        return global_x, global_y, global_th
+
     def vision(self, r_m):
         dist, th = None, None
-        local_x, local_y = None, None
         global_x, global_y = None, None
 
         frame = self.camera.read_frame()
@@ -30,29 +38,19 @@ class Robot(object):
         
         if len(centroid):
             dist, th = self.camera.distance(*centroid, r_px, r_m)
-            local_x, local_y = dist * cos(th), dist * sin(th)
-            global_x = self.model.x + local_x * cos(self.model.th) - local_y * sin(self.model.th)
-            global_y = self.model.y + local_x * sin(self.model.th) + local_y * cos(self.model.th)
-        
-        return dist, th, local_x, local_y, global_x, global_y
+            global_x, global_y, _ = self.transform(dist, th)
+
+        return dist, th, global_x, global_y
     
     def collect(self, r_m, xbound, ybound, too_close, alpha, beta):
-        dist, th, local_x, local_y, global_x, global_y = self.vision(r_m)
+        dist, th, global_x, global_y = self.vision(r_m)
         
         if dist is not None:
             if dist > too_close:
                 if abs(global_x) < xbound and abs(global_y) < ybound:
 
-                    goal_th = self.model.th + th * beta
-                    goal_y = self.model.y + alpha * local_x * sin(self.model.th) + alpha * local_y * cos(self.model.th)
-                    goal_x = self.model.x + alpha * local_x * cos(self.model.th) - alpha * local_y * sin(self.model.th)
-
-                    # self.drive(self.model.x, self.model.y, self.model.th)
-                    self.drive(goal_x, goal_y, goal_th)
-
-                    # print('Hello')
-                    # self.drive(goal_x, goal_y, self.model.th)
-                    # print('bye bye')
+                    goal_x, goal_y, goal_th = self.transform(dist, th, alpha, beta)
+                    self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)
 
                     return True
             else:
@@ -63,16 +61,16 @@ class Robot(object):
 
         return False
     
-    def start(self, r_m, alpha, beta, xbound, ybound, too_close):
-        th, dth = 0, 0.785*2
-
+    def explore(self, dth):
+        if (self.model.th + dth) // (2 * pi) > self.model.th // (2 * pi):
+            dth = dth / 2
+        
+        self.drive(self.model.x, self.model.y, self.model.th + dth)
+        return dth
+    
+    def start(self, r_m, alpha, beta, xbound, ybound, too_close, dth):
         while True:
             detected = self.collect(r_m, xbound, ybound, too_close, alpha, beta)
 
             if not detected:
-                goal_th = self.model.th + dth
-                self.drive(self.model.x, self.model.y, goal_th)
-
-                th = th + dth
-                if th > 2*pi:
-                    dth, th = dth / 2, 0
+                dth = self.explore(dth)
