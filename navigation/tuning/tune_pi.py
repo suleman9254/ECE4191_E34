@@ -46,4 +46,3 @@ def callback(study, trial):
 
 study = optuna.create_study(storage="sqlite:///tune_pi.sqlite3", study_name='PI Tuning')
 study.optimize(objective, n_trials=50)
-
