@@ -20,7 +20,9 @@ class Robot(object):
         self.model.pose_update(0, 0)
 
     def vision(self, r_m):
-        dist, th, x, y = None, None, None, None
+        dist, th = None, None
+        local_x, local_y = None, None
+        global_x, global_y = None, None
 
         frame = self.camera.read_frame()
         frame = self.camera.undistort(frame)
@@ -28,26 +30,29 @@ class Robot(object):
         
         if len(centroid):
             dist, th = self.camera.distance(*centroid, r_px, r_m)
-            x = sign(self.model.x) * dist * cos(th) + self.model.x
-            y = dist * sin(th) + self.model.y
+            local_x, local_y = dist * cos(th), dist * sin(th)
+            global_x = self.model.x + local_x * cos(self.model.th) - local_y * sin(self.model.th)
+            global_y = self.model.y + local_x * sin(self.model.th) + local_y * cos(self.model.th)
         
-        return dist, th, x, y
+        return dist, th, local_x, local_y, global_x, global_y
     
     def collect(self, r_m, xbound, ybound, too_close, alpha, beta):
-        dist, th, x, y = self.vision(r_m)
+        dist, th, local_x, local_y, global_x, global_y = self.vision(r_m)
         
         if dist is not None:
             if dist > too_close:
-                if abs(x) < xbound and abs(y) < ybound:
+                if abs(global_x) < xbound and abs(global_y) < ybound:
 
                     goal_th = self.model.th + th * beta
-                    goal_x = sign(self.model.x) * alpha * dist * cos(th) + self.model.x
+                    goal_y = self.model.y + alpha * local_x * sin(self.model.th) + alpha * local_y * cos(self.model.th)
+                    goal_x = self.model.x + alpha * local_x * cos(self.model.th) - alpha * local_y * sin(self.model.th)
 
-                    self.drive(self.model.x, self.model.y, goal_th)
+                    # self.drive(self.model.x, self.model.y, self.model.th)
+                    self.drive(goal_x, goal_y, goal_th)
 
-                    print('Hello')
-                    self.drive(goal_x, self.model.y, self.model.th)
-                    print('bye bye')
+                    # print('Hello')
+                    # self.drive(goal_x, goal_y, self.model.th)
+                    # print('bye bye')
 
                     return True
             else:
