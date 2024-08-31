@@ -25,7 +25,7 @@ def run_trial(controller):
     ssd = 0
     
     for v in vref:
-        duty_cycle_l, duty_cycle_r = controller.drive(v=v, w=0, wl=model.wl, wr=model.wr)
+        duty_cycle_l, duty_cycle_r = controller.drive(v, 0, wl=model.wl, wr=model.wr)
         model.pose_update(duty_cycle_l, duty_cycle_r)
         ssd = ssd + (v - model.v)**2
     
@@ -44,5 +44,7 @@ def callback(study, trial):
     if study.best_trial == trial:
         print(study.best_params)
 
-study = optuna.create_study(storage="sqlite:///tune_pi.sqlite3", study_name='PI Tuning')
+study = optuna.create_study(storage="sqlite:///navigation/tuning/tune_pi.sqlite3", study_name='PI Tuning')
+
+study.enqueue_trial({"Kp": 0.025, "Ki": 0.001})
 study.optimize(objective, n_trials=50)
