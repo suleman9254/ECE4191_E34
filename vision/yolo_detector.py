@@ -7,8 +7,9 @@ class YOLODetector(object):
         self.thresh = thresh
     
     def find_ball(self, frame):
+        
         results = self.model(frame)
-        centroid, r_px = [], None
+        detections, centroid, r_px = [], [], []
 
         for result in results:
             for box in result.boxes:
@@ -20,8 +21,11 @@ class YOLODetector(object):
                     r_px = max(x2 - x1, y2 - y1) / 2
                     centroid = ((x1 + x2) / 2, (y1 + y2) / 2)
 
-                    self.draw_circle(frame, centroid, r_px)
-                    return frame, centroid, r_px
+                    detections.append((centroid, r_px))
+        
+        if detections:
+            (centroid, r_px) = max(detections, key=lambda x: x[1])
+            self.draw_circle(frame, centroid, r_px)
         
         return frame, centroid, r_px
     
