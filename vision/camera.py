@@ -14,8 +14,8 @@ class Camera(object):
         if not self.camera.isOpened():
             raise Exception("Error: Could not open camera.")
         
-        self.matrix = np.load('vision/params/camera_matrix.npy')
-        self.dist_coeffs = np.load('vision/params/distortion.npy')
+        self.matrix = np.load('vision/calibration/params/camera_matrix.npy')
+        self.dist_coeffs = np.load('vision/calibration/params/distortion.npy')
         
         self.queue = Queue()
         thread = Thread(target=self._reader)

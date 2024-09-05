@@ -5,8 +5,8 @@ from navigation.kinematics import DiffDriveModel
 from navigation.controller import PIController
 from navigation.planner import TentaclePlanner
 
-from retrieval.claw import Claw
-from retrieval.sensor import Ultrasonic
+from transducers.grabber import Claw
+from transducers.sensor import Ultrasonic
 
 from vision.camera import Camera
 from vision.yolo_detector import YOLODetector
