@@ -33,17 +33,14 @@ class Rail(object):
         self.disable()
 
     def step_motor(self, clockwise):
-        self.step_number += -1 if clockwise else 1
+        increment = -1 if clockwise else 1
+        self.step_number = self.step_number + increment
 
-        seq_idx = self.step_number % self.number_of_steps
-        seq_idx = int(seq_idx % len(self.step_sequence))
-        seq = self.step_sequence[seq_idx]
+        norm_step = self.step_number % self.number_of_steps
+        seq_idx = norm_step % len(self.step_sequence)
+        seq = self.step_sequence[ int(seq_idx) ]
         
-        for idx, pin in enumerate(seq):
-            
-            if pin == 1:
-                self.motor_pins[idx].on() 
-            else:
-                self.motor_pins[idx].off()
+        for logic, pin in zip(seq, self.motor_pins):
+            pin.on() if logic else pin.off()
 
         sleep(self.step_delay)
