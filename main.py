@@ -7,9 +7,10 @@ from navigation.planner import TentaclePlanner
 
 from transducers.grabber import Claw
 from transducers.sensor import Ultrasonic
+from transducers.stepper import Rail
 
 from vision.camera import Camera
-from vision.yolo_detector import YOLODetector
+from vision.detector import YOLODetector
 
 from system.robot import Robot
 
@@ -17,7 +18,8 @@ max_count = 48 * 75
 motorL = Motor(in1=5, in2=6, enable=13, freq=100, encA=23, encB=24, max_count=max_count)
 motorR = Motor(in1=17, in2=27, enable=22, freq=100, encA=19, encB=26, max_count=max_count)
 
-claw, ultrasonic = Claw(pin=21), Ultrasonic(echo=16, trigger=20)
+claw, ultrasonic = Claw(pin=4), Ultrasonic(echo=18, trigger=25)
+rail = Rail(motor_pins=[12, 16, 20, 21], start_pos=0)
 
 encoder_delay = 0.02
 dt = 2 * encoder_delay + 0.005
@@ -29,5 +31,6 @@ planner = TentaclePlanner(v, w, steps=5, alpha=1, beta=0.1, dt=dt)
 
 camera, detector = Camera(0), YOLODetector(path='vision/yolo.pt')
 
-robot = Robot(model, controller, planner, claw=claw, distance_sensor=ultrasonic, camera=camera, detector=detector)
+robot = Robot(model, controller, planner, claw, rail, ultrasonic, camera, detector)
+
 robot.start(r_m=0.0325, alpha=0.3, beta=0.8, xbound=6.4, ybound=4.11, dth=1.5708, claw_trigger_dist=0.01, start_collection_dist=0.25)    
