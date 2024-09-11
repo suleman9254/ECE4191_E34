@@ -2,11 +2,13 @@ import numpy as np
 import cv2 as cv
 import glob
 
+from time import time
+
 # Termination criteria for corner sub-pixel accuracy
 criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.00001)
 
 # Define the size of a chessboard square
-square_size = 0.0315 # meters
+square_size = 0.028 # meters
 
 # Prepare object points based on the size of the chessboard squares
 objp = np.zeros((6*7, 3), np.float32)
@@ -24,7 +26,7 @@ for fname in images:
     
     # Find the chessboard corners
     ret, corners = cv.findChessboardCorners(gray, (7, 6), None)
-    
+
     # If found, refine and add object points and image points
     if ret:
         objpoints.append(objp)
@@ -33,14 +35,10 @@ for fname in images:
         imgpoints.append(corners2)
 
         cv.drawChessboardCorners(img, (7, 6), corners2, ret)
-        cv.imshow('Chessboard Corners', img)
-        cv.waitKey(0)  # Display each image for 500 milliseconds
+        cv.imwrite(f'tmp/{time()}.jpg', img)
 
 # Calibrate the camera
-# ret, mtx, dist, rvecs, tvecs = cv.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
+ret, mtx, dist, rvecs, tvecs = cv.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
 
-# np.save('vision/calibration/params/camera_matrix.npy', mtx)
-# np.save('vision/calibration/params/distortion.npy', dist)
-
-cv.destroyAllWindows()
-
+np.save('vision/calibration/params/camera_matrix.npy', mtx)
+np.save('vision/calibration/params/distortion.npy', dist)
