@@ -2,32 +2,22 @@ import math
 from threading import Thread
 
 class DiffDriveModel(object):
-    def __init__(self, motor_l, motor_r, wheel_radius=0.05, wheel_sep=0.15, dt=0.08, encoder_delay=0.04):
+    def __init__(self, motorL, motorR, wheel_radius=0.05, wheel_sep=0.15, dt=0.08, encoder_delay=0.04):
         
-        self.x = 0.0 # x-position
-        self.y = 0.0 # y-position 
-        self.th = 0.0 # orientation
+        self.x, self.y, self.th = 0, 0, 0
+        self.wl, self.wr, self.v, self.w = 0, 0, 0, 0
         
-        self.wl = 0.0 # rotational velocity left wheel
-        self.wr = 0.0 # rotational velocity right wheel
-
-        self.v = 0.0 # forward velocity
-        self.w = 0.0 # angular velocity
-        
-        self.r = wheel_radius
-        self.l = wheel_sep
         self.dt = dt
+        self.l = wheel_sep
+        self.r = wheel_radius
+        self.enc_dt = encoder_delay
 
-        self.right_motor = motor_r
-        self.left_motor = motor_l
-
-        self.encoder_delay = encoder_delay
-
-    def update_wheel_velocities(self):
-        self.wl = self.left_motor.read_velocity(self.encoder_delay)
-        self.wr = self.right_motor.read_velocity(self.encoder_delay)
-
-    def update_base_velocities(self):
+        self.motorL = motorL
+        self.motorR = motorR
+    
+    def update_velocities(self):
+        self.wl = self.motorL.read_velocity(self.enc_dt)
+        self.wr = self.motorR.read_velocity(self.enc_dt)
         self.v = (self.wl*self.r - self.wr*self.r) / 2.0
         self.w = (self.wl*self.r + self.wr*self.r) / self.l
     
@@ -36,15 +26,17 @@ class DiffDriveModel(object):
         self.y = self.y + self.dt*self.v*math.sin(self.th)
         self.th = self.th + self.w*self.dt
 
-    def change_pwm(self, duty_cycle_l, duty_cycle_r):
-        self.left_motor.change_pwm(duty_cycle_l)
-        self.right_motor.change_pwm(duty_cycle_r)
+    def read_velocities(self):
+        return self.wl, self.wr, self.v, self.w
+
+    def read_position(self):
+        return self.x, self.y, self.th
+
+    def set_pwm(self, duty_cycle_l, duty_cycle_r):
+        self.motorL.set_pwm(duty_cycle_l)
+        self.motorR.set_pwm(duty_cycle_r)
 
     def pose_update(self, duty_cycle_l, duty_cycle_r):
-        
-        self.change_pwm(duty_cycle_l, 
-                        duty_cycle_r)
-        
-        self.update_wheel_velocities()
-        self.update_base_velocities()
+        self.set_pwm(duty_cycle_l, duty_cycle_r)
+        self.update_velocities()
         self.update_position()

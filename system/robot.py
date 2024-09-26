@@ -1,7 +1,7 @@
 from math import pi, cos, sin, atan2
 
 class Robot(object):
-    def __init__(self, model, controller, planner, claw, rail, sensor, camera=None, detector=None):
+    def __init__(self, model, controller, planner, claw=None, rail=None, sensor=None, camera=None, detector=None):
 
         self.caw = claw
         self.camera = camera
@@ -13,14 +13,24 @@ class Robot(object):
         self.rail = rail
 
     def drive(self, goal_x, goal_y, goal_th):
-        v, w = None, None
-        while v != 0 or w != 0:
-            v, w = self.planner.plan(goal_x, goal_y, goal_th, self.model.x, self.model.y, self.model.th)
-            duty_cycle_l, duty_cycle_r = self.controller.drive(v, w, self.model.wl, self.model.wr)
-            self.model.pose_update(duty_cycle_l, duty_cycle_r)
         
-        self.model.pose_update(0, 0)
-    
+        wl, wr, v, w = self.model.read_velocity()
+        position = start_position = self.model.read_position()
+
+        while True:
+            goal_v, goal_w = self.planner.plan(goal_x, goal_y, goal_th, *position)
+            dutyL, dutyR = self.controller.drive(goal_v, goal_w, wl, wr)
+            self.model.pose_update(dutyL, dutyR)
+            
+            position = self.model.read_position()
+            wl, wr, v, w = self.model.read_velocity()
+
+            if position == start_position:
+                return False
+            
+            if v == goal_v == w == goal_w == 0:
+                return True
+        
     def transform(self, dist, th, alpha=1, beta=1):
         dist, th = alpha * dist, beta * th
         local_x, local_y = dist * cos(th), dist * sin(th)
@@ -50,64 +60,42 @@ class Robot(object):
         self.drive(self.model.x, self.model.y, goal_th)
         self.drive(goal_x=0, goal_y=0, goal_th=goal_th)
     
-    def collect(self, grab_dist, retry_dist, success_dist, tries):
-        while self.sensor.read() < retry_dist \
-                and tries > 0:        
-
-            self.claw.release()
-            
-            while self.sensor.read() > grab_dist:
-                goal_x, goal_y, goal_th = self.transform(dist=self.sensor.read(), th=0, alpha=0.3, beta=0.8)
-                self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)
+    def collect(self, grab_dist, alpha):
         
-            self.claw.grab()
-            tries = tries - 1
+        while ( dist := self.sensor.read() ) > grab_dist: 
+            goal_x, goal_y, goal_th = self.transform(dist=dist, th=0, alpha=alpha)
+            movement = self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)
 
-            if self.sensor.read() < success_dist:
+            if not movement:
+                break
+        
+        self.claw.grab()
+        if dist < grab_dist * 1.1:
+            return True
+
+        self.claw.release()    
+        return False
+    
+    def approach(self, r_m, xbound, ybound, d_lim, th_lim, alpha, beta):
+        while True:
+            dist, th, global_x, global_y = self.vision(r_m, self.detector.find_ball)
+
+            if dist is None or global_x > xbound or -global_y > ybound:
+                return False
+
+            if dist < d_lim and abs(th) < th_lim:
                 return True
+
+            dist = 0 if dist < d_lim else dist
+
+            goal_x, goal_y, goal_th = self.transform(dist, th, alpha, beta)
+            movement = self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)
             
-        return False
+            if not movement:
+                return True
     
-    def deliver(self):
-        self.rail.set_position()
-    
-    def approach(self, r_m, xbound, ybound, start_collection_dist, alpha, beta, grab_dist, retry_dist, success_dist, tries):
-        dist, th, global_x, global_y = self.vision(r_m, self.detector.find_ball)
-        
-        if dist is not None:
-            if dist > start_collection_dist: # assuming origin @ bottom right corner
-                if global_x < xbound and -global_y < ybound:
-
-                    goal_x, goal_y, goal_th = self.transform(dist, th, alpha, beta)
-                    self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)
-
-                    return True
-            else:
-                
-                collected = self.collect(grab_dist, retry_dist, success_dist, tries)
-                # if collected:
-                    # self.deliver()
-
-        return False
-
-    def explore(self, th, dth):        
-        self.drive(self.model.x, self.model.y, self.model.th + dth)
-
-        if (th + dth) // (2 * pi) > th // (2 * pi):
-            th = th + dth
-            dth = dth / 2
-        else:
-            th = th + dth
-        
-        return th, dth
-    
-    def start(self, r_m, alpha, beta, xbound, ybound, dth, start_collection_dist, grab_dist, retry_dist, success_dist, max_tries):
-        th = 0
+    def start(self, r_m, alpha, beta, xbound, ybound, collect_dist, collect_th, grab_dist):
 
         while True:
-            detected = self.collect(r_m, xbound, ybound, start_collection_dist, alpha, beta, grab_dist, retry_dist, success_dist, max_tries)
 
-            if not detected:
-                th, dth = self.explore(th, dth)
-            else:
-                th = 0
+            approached = self.approach(r_m, xbound, ybound, collect_dist, collect_th, alpha, beta)

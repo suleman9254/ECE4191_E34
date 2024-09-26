@@ -1,6 +1,6 @@
 import cv2 as cv
 import numpy as np
-from ultralytics import YOLOv10 as YOLO
+from ultralytics import YOLO
 
 class YOLODetector(object):
     def __init__(self, box_ckpt, ball_ckpt, thresh):
@@ -32,7 +32,6 @@ class YOLODetector(object):
         
             radius = self._radius(box)
             centroid = self._centroid(box)
-            self.draw_circle(frame, centroid, radius)
         
         return frame, centroid, radius
 

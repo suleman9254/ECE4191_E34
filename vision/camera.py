@@ -17,8 +17,7 @@ class Camera(object):
         self.matrix = np.load('vision/calibration/params/camera_matrix.npy')
         self.dist_coeffs = np.load('vision/calibration/params/distortion.npy')
         
-        self.queue = Queue()
-        thread = Thread(target=self._reader)
+        thread, self.queue = Thread(target=self._reader), Queue()
         thread.daemon = True
         thread.start()
     

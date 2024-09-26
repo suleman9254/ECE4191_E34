@@ -1,8 +1,8 @@
-from gpiozero import DistanceSensor
+from PiicoDev_VL53L1X import PiicoDev_VL53L1X as Sensor
 
-class Ultrasonic(object):
-    def __init__(self, echo, trigger):
-        self.sensor = DistanceSensor(echo, trigger, queue_len=1)
+class DistanceSensor(object):
+    def __init__(self):
+        self.sensor = Sensor()
     
     def read(self):
-        return self.sensor.distance
+        return self.sensor.read() / 1000

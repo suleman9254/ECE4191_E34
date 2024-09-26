@@ -30,12 +30,8 @@ for fname in images:
     # If found, refine and add object points and image points
     if ret:
         objpoints.append(objp)
-        
         corners2 = cv.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
         imgpoints.append(corners2)
-
-        cv.drawChessboardCorners(img, (7, 6), corners2, ret)
-        cv.imwrite(f'tmp/{time()}.jpg', img)
 
 # Calibrate the camera
 ret, mtx, dist, rvecs, tvecs = cv.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)

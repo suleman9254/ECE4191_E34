@@ -9,14 +9,16 @@ class PIController(object):
         self.e_sum_r = 0
         
     def p_control(self, w_desired, w_measured, e_sum):
-        
-        duty_cycle = self.Kp * (w_desired - w_measured) + self.Ki * e_sum
+
+        e = w_desired - w_measured
+        duty_cycle = self.Kp * e + self.Ki * e_sum
         duty_cycle = min(max(-1, duty_cycle), 1)
-        e_sum = e_sum + (w_desired - w_measured)
         
+        e_sum = e_sum + e
         return duty_cycle, e_sum
         
     def drive(self, v_desired, w_desired, wl, wr):
+
         wl_desired = (v_desired + self.l*w_desired / 2) / self.r
         wr_desired = -(v_desired - self.l*w_desired / 2) / self.r
         

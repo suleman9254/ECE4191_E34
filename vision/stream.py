@@ -7,7 +7,7 @@ class Stream(object):
         
         self.host = host
         self.port = port
-        self.camera = cv.VideoCapture(camera)
+        self.camera = camera
         self.detector = detector
 
         self.app = Flask(__name__)
@@ -15,7 +15,7 @@ class Stream(object):
     
     def get_frame(self):
         while True:
-            ret, frame = self.camera.read()
+            _, frame = self.camera.read()
             
             _, buffer = cv.imencode('.jpg', frame)
             frame = buffer.tobytes()

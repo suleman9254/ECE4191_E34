@@ -5,41 +5,40 @@ import atexit
 
 class Motor(object):
     def __init__(self, in1, in2, enable, freq, encA, encB, max_count):
-        self.max_count = max_count
 
         self.in1 = gpiozero.OutputDevice(pin=in1)
         self.in2 = gpiozero.OutputDevice(pin=in2)
         self.pwm = gpiozero.PWMOutputDevice(pin=enable, frequency=freq)
         self.enc = gpiozero.RotaryEncoder(a=encA, b=encB, max_steps=0)
 
-        self.change_direction(True)
-        atexit.register(self.release)
-    
-    def release(self):
-        self.in1.close()
-        self.in2.close()
-        self.pwm.close()
-        self.enc.close()
+        self.off = 0.1
+        self.max_count = max_count
+        self.set_dir(True)
 
-    def change_direction(self, dir):
-        self.dir = dir
+    def set_dir(self, dir):
 
-        if self.dir == True:
+        if dir == True:
             self.in1.on()
             self.in2.off()
         
-        elif self.dir == False:
+        elif dir == False:
             self.in1.off()
             self.in2.on()
         
         else:
             self.in1.off()
             self.in2.off()
+        
+        self.dir = dir
     
-    def change_pwm(self, duty):
-        desired_direction = duty > 0
-        if desired_direction != self.dir:
-            self.change_direction(desired_direction)
+    def set_pwm(self, duty):
+        
+        dir = duty > 0
+        if abs(duty) < self.off:
+            dir = None
+        
+        if dir != self.dir:
+            self.set_dir(dir)
 
         self.pwm.value = abs(duty)
     
