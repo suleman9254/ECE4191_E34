@@ -1,7 +1,6 @@
 import gpiozero
 import time
 import math
-import atexit
 
 class Motor(object):
     def __init__(self, in1, in2, enable, freq, encA, encB, max_count):
