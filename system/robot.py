@@ -19,7 +19,7 @@ class Robot(object):
     def drive(self, goal_x, goal_y, goal_th):
         
         wl, wr, v, w = self.model.read_velocities()
-        position = start_position = self.model.read_position()
+        position = self.model.read_position()
 
         while True:
             goal_v, goal_w = self.planner.plan(goal_x, goal_y, goal_th, *position)
@@ -29,13 +29,13 @@ class Robot(object):
             position = self.model.read_position()
             wl, wr, v, w = self.model.read_velocities()
 
-            # impossible tiny movement
-            if position == start_position:
-                return False
-            
             # planner wants stop and wheels stationary
             if v == goal_v == w == goal_w == 0:
                 return True
+            
+            # impossible tiny movement
+            if v == w == 0 and not (goal_v == goal_w == 0):
+                return False
         
     def transform(self, dist, th, alpha=1, beta=1):
         dist, th = alpha * dist, beta * th
@@ -106,41 +106,45 @@ class Robot(object):
             if not movement:
                 return True
             
-    def deliver(self, x, y, height, d_lim, th_lim, alpha, beta):
+    # def deliver(self, x, y, height, d_lim, th_lim, alpha, beta):
 
-        self.rail.set_position(0.3)
+    #     self.rail.set_position(0.3)
 
-        goal_th = atan2(x, y)
-        goal_x, goal_y = x * 0.5, y * 0.5
-        self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)
+    #     goal_th = atan2(x, y)
+    #     goal_x, goal_y = x * 0.5, y * 0.5
+    #     self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)
 
-        inf = 10000
-        detected = self.approach(height, inf, inf, d_lim, th_lim, alpha, beta, self.detector.find_box)
-        while not detected:
-
-
+    #     inf = 10000
+    #     detected = self.approach(height, inf, inf, d_lim, th_lim, alpha, beta, self.detector.find_box)
+    #     while not detected:
 
 
 
 
 
-    def explore(self):
+
+
+    # def explore(self):
 
 
 
     
-    def start(self, op_time, r_m, alpha, beta, xbound, ybound, collect_dist, collect_th, grab_dist):
+    # def start(self, op_time, r_m, alpha, beta, xbound, ybound, collect_dist, collect_th, grab_dist):
         
-        start_time = time()
-        while time() - start_time < op_time:
+    #     start_time = time()
+    #     while time() - start_time < op_time:
 
-            detected = self.approach(r_m, xbound, ybound, collect_dist, collect_th, alpha, beta, self.detector.find_ball)
-            if detected:
-                collected = self.collect(grab_dist, alpha)
-                if collected:
-                    print('Collected LOLOLOLOLOLOL!')
-            else:
-                self.explore()
+    #         detected = self.approach(r_m, xbound, ybound, collect_dist, collect_th, alpha, beta, self.detector.find_ball)
+    #         if detected:
+    #             collected = self.collect(grab_dist, alpha)
+    #             if collected:
+    #                 print('Collected LOLOLOLOLOLOL!')
+    #         else:
+    #             self.explore()
+        
+    #     home_position = self.home()
+    #     self.drive(*home_position)
+
                 
 
 
