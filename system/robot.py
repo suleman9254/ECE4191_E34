@@ -12,30 +12,36 @@ class Robot(object):
         self.planner = planner
         self.sensor = sensor
         self.rail = rail
+
+        self.timeout = 1
     
     def home(self):
         return 0, 0, atan2(-self.model.y, -self.model.x)
-
+    
     def drive(self, goal_x, goal_y, goal_th):
         
-        wl, wr, v, w = self.model.read_velocities()
-        position = self.model.read_position()
+        time_of_movement = time()
+        goal_v = goal_w = float('inf')
+        wl, wr, v, w = self.model.velocities()
+        x, y, th = x0, y0, th0 = self.model.position()
+        
+        while not v == goal_v == w == goal_w == 0:
 
-        while True:
-            goal_v, goal_w = self.planner.plan(goal_x, goal_y, goal_th, *position)
+            goal_v, goal_w = self.planner.plan(goal_x, goal_y, goal_th, x, y, th)
             dutyL, dutyR = self.controller.drive(goal_v, goal_w, wl, wr)
             self.model.pose_update(dutyL, dutyR)
-            
-            position = self.model.read_position()
-            wl, wr, v, w = self.model.read_velocities()
 
-            # planner wants stop and wheels stationary
-            if v == goal_v == w == goal_w == 0:
-                return True
+            x, y, th = self.model.position()
+            wl, wr, v, w = self.model.velocities()
             
-            # impossible tiny movement
-            if v == w == 0 and not (goal_v == goal_w == 0):
-                return False
+            if v != 0 or w != 0:
+                time_of_movement = time()
+
+            if time() - time_of_movement > self.timeout:
+                break
+        
+        self.model.brake()
+        return True if (x, y, th) != (x0, y0, th0) else False
         
     def transform(self, dist, th, alpha=1, beta=1):
         dist, th = alpha * dist, beta * th
@@ -63,10 +69,12 @@ class Robot(object):
     
     def collect(self, grab_dist, alpha):
         
-        while ( dist := self.sensor.read() ) > grab_dist: 
+        dist = self.sensor.read()
+        while dist > grab_dist: 
             goal_x, goal_y, goal_th = self.transform(dist=dist, th=0, alpha=alpha)
             movement = self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)
 
+            dist = self.sensor.read()
             if not movement:
                 break
         
@@ -118,32 +126,29 @@ class Robot(object):
     #     detected = self.approach(height, inf, inf, d_lim, th_lim, alpha, beta, self.detector.find_box)
     #     while not detected:
 
-
-
-
-
-
-
     # def explore(self):
 
 
 
     
-    # def start(self, op_time, r_m, alpha, beta, xbound, ybound, collect_dist, collect_th, grab_dist):
+    def start(self, op_time, r_m, alpha, beta, xbound, ybound, collect_dist, collect_th, grab_dist):
         
-    #     start_time = time()
-    #     while time() - start_time < op_time:
+        start_time = time()
+        while time() - start_time < op_time:
 
-    #         detected = self.approach(r_m, xbound, ybound, collect_dist, collect_th, alpha, beta, self.detector.find_ball)
-    #         if detected:
-    #             collected = self.collect(grab_dist, alpha)
-    #             if collected:
-    #                 print('Collected LOLOLOLOLOLOL!')
-    #         else:
-    #             self.explore()
+            detected = self.approach(r_m, xbound, ybound, collect_dist, collect_th, alpha, beta, self.detector.find_ball)
+            if detected:
+                print('Done')
+
+
+        #         collected = self.collect(grab_dist, alpha)
+        #         if collected:
+        #             print('Collected LOLOLOLOLOLOL!')
+        #     else:
+        #         self.explore()
         
-    #     home_position = self.home()
-    #     self.drive(*home_position)
+        # home_position = self.home()
+        # self.drive(*home_position)
 
                 
 
