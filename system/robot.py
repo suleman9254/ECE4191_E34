@@ -14,9 +14,10 @@ class Robot(object):
         self.rail = rail
 
         self.timeout = 1
-    
+
     def home(self):
-        return 0, 0, atan2(-self.model.y, -self.model.x)
+        x, y, _ = self.model.position()
+        return 0, 0, atan2(-y, -x)
     
     def drive(self, goal_x, goal_y, goal_th):
         
@@ -44,6 +45,7 @@ class Robot(object):
         return True if (x, y, th) != (x0, y0, th0) else False
         
     def transform(self, dist, th, alpha=1, beta=1):
+        
         dist, th = alpha * dist, beta * th
         local_x, local_y = dist * cos(th), dist * sin(th)
 
@@ -54,6 +56,7 @@ class Robot(object):
         return global_x, global_y, global_th
 
     def vision(self, length, detector):
+        
         dist, th = None, None
         global_x, global_y = None, None
 
@@ -69,21 +72,21 @@ class Robot(object):
     
     def collect(self, grab_dist, alpha):
         
-        dist = self.sensor.read()
-        while dist > grab_dist: 
+        movement = True
+        distance = self.sensor.read()
 
-            goal_x, goal_y, goal_th = self.transform(dist=dist, th=0, alpha=alpha)
+        while distance > grab_dist and movement:
+            
+            goal_x, goal_y, goal_th = self.transform(dist=distance, th=0, alpha=alpha)
             movement = self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)
+            distance = self.sensor.read()
 
-            dist = self.sensor.read()
-            if not movement:
-                break
-        
         self.claw.grab()
-        if dist < grab_dist * 1.1:
+
+        if self.sensor.read() < grab_dist * 1.1:
             return True
 
-        self.claw.release()    
+        self.claw.release()
         return False
     
     def approach(self, r_m, xbound, ybound, d_lim, alpha, beta, detector):
@@ -125,9 +128,6 @@ class Robot(object):
     #     while not detected:
 
     # def explore(self):
-
-
-
     
     def start(self, op_time, r_m, alpha, beta, xbound, ybound, collect_dist, grab_dist):
         
@@ -135,18 +135,18 @@ class Robot(object):
         while time() - start_time < op_time:
 
             detected = self.approach(r_m, xbound, ybound, collect_dist, alpha, beta, self.detector.find_ball)
-            if detected:
-                print('Done')
 
+            if not detected:
+                self.explore()
+                continue
+                        
+            collected = self.collect(grab_dist, alpha)
 
-        #         collected = self.collect(grab_dist, alpha)
-        #         if collected:
-        #             print('Collected LOLOLOLOLOLOL!')
-        #     else:
-        #         self.explore()
-        
-        # home_position = self.home()
-        # self.drive(*home_position)
+            if collected:
+                self.deliver()
+
+        home = self.home()
+        self.drive(*home)
 
                 
 
