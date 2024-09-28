@@ -10,8 +10,8 @@ class Motor(object):
         self.pwm = gpiozero.PWMOutputDevice(pin=enable, frequency=freq)
         self.enc = gpiozero.RotaryEncoder(a=encA, b=encB, max_steps=0)
 
-        self.set_dir(True)
-        self.off, self.max_count = 0.05, max_count
+        self.set_dir(None)
+        self.max_count = max_count
 
     def set_dir(self, dir):
 
@@ -30,11 +30,7 @@ class Motor(object):
         self.dir = dir
     
     def set_pwm(self, duty):
-        
-        dir = duty > 0
-        if abs(duty) < self.off:
-            dir = None
-        
+        dir = duty > 0       
         if dir != self.dir:
             self.set_dir(dir)
 

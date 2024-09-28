@@ -15,6 +15,12 @@ class DiffDriveModel(object):
         self.motorL = motorL
         self.motorR = motorR
     
+    def velocities(self):
+        return self.wl, self.wr, self.v, self.w
+
+    def position(self):
+        return self.x, self.y, self.th
+    
     def update_velocities(self):
         self.wl = self.motorL.read_velocity(self.enc_dt)
         self.wr = self.motorR.read_velocity(self.enc_dt)
@@ -25,12 +31,10 @@ class DiffDriveModel(object):
         self.x = self.x + self.dt*self.v*math.cos(self.th)
         self.y = self.y + self.dt*self.v*math.sin(self.th)
         self.th = self.th + self.w*self.dt
-
-    def read_velocities(self):
-        return self.wl, self.wr, self.v, self.w
-
-    def read_position(self):
-        return self.x, self.y, self.th
+    
+    def brake(self):
+        self.motorL.set_dir(None)
+        self.motorR.set_dir(None)
 
     def set_pwm(self, duty_cycle_l, duty_cycle_r):
         self.motorL.set_pwm(duty_cycle_l)
