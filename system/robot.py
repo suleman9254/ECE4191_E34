@@ -71,6 +71,7 @@ class Robot(object):
         
         dist = self.sensor.read()
         while dist > grab_dist: 
+
             goal_x, goal_y, goal_th = self.transform(dist=dist, th=0, alpha=alpha)
             movement = self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)
 
@@ -85,10 +86,12 @@ class Robot(object):
         self.claw.release()    
         return False
     
-    def approach(self, r_m, xbound, ybound, d_lim, th_lim, alpha, beta, detector):
+    def approach(self, r_m, xbound, ybound, d_lim, alpha, beta, detector):
+        
+        movement = True
         goal_x = goal_y = goal_th = None
 
-        while True:
+        while movement:
             dist, th, glob_x, glob_y = self.vision(r_m, detector)
 
             # undo last movement if ball is lost
@@ -101,19 +104,14 @@ class Robot(object):
             if dist is None or glob_x > xbound or -glob_y > ybound:
                 return False
 
-            # within ToF range and facing ball
-            if dist < d_lim and abs(th) < th_lim:
-                return True
-
-            # last minute angle correction w/o forward drive
+            # last minute angle correction 
             dist = 0 if dist < d_lim else dist
 
             goal_x, goal_y, goal_th = self.transform(dist, th, alpha, beta)
             movement = self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)
-            
-            if not movement:
-                return True
-            
+
+        return True
+    
     # def deliver(self, x, y, height, d_lim, th_lim, alpha, beta):
 
     #     self.rail.set_position(0.3)
@@ -131,12 +129,12 @@ class Robot(object):
 
 
     
-    def start(self, op_time, r_m, alpha, beta, xbound, ybound, collect_dist, collect_th, grab_dist):
+    def start(self, op_time, r_m, alpha, beta, xbound, ybound, collect_dist, grab_dist):
         
         start_time = time()
         while time() - start_time < op_time:
 
-            detected = self.approach(r_m, xbound, ybound, collect_dist, collect_th, alpha, beta, self.detector.find_ball)
+            detected = self.approach(r_m, xbound, ybound, collect_dist, alpha, beta, self.detector.find_ball)
             if detected:
                 print('Done')
 
