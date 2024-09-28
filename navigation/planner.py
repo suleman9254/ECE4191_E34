@@ -27,8 +27,9 @@ class TentaclePlanner:
         
         return self.alpha*e_xy + self.beta*e_th
     
-    def plan(self, goal_x, goal_y, goal_th, x, y, th):        
-        costs =[]
+    def plan(self, goal_x, goal_y, goal_th, x, y, th):
+        
+        costs = []
         for v, w in self.tentacles:
             dist = self.roll_out(v, w, goal_x, goal_y, goal_th, x, y, th)
             costs.append(dist)
