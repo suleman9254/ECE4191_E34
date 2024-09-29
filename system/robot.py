@@ -2,7 +2,7 @@ from time import time
 from math import cos, sin, atan2
 
 class Robot(object):
-    def __init__(self, model, controller, planner, claw=None, rail=None, sensor=None, camera=None, detector=None):
+    def __init__(self, model, controller, planner, claw=None, rail=None, sensor=None, camera=None, detector=None, params=None):
 
         self.claw = claw
         self.camera = camera
@@ -13,16 +13,25 @@ class Robot(object):
         self.sensor = sensor
         self.rail = rail
 
+        if params is not None:
+            self.xBox = params['xBox']
+            self.yBox = params['yBox']
+            self.xBound = params['xBound']
+            self.yBound = params['yBound']
+            self.ballRadius = params['ballRadius']
+            self.boxHeight = params['boxHeight']
+
         self.timeout = 1
 
     def home(self):
         x, y, _ = self.model.position()
-        return 0, 0, atan2(-y, -x)
+        return 0, 0, atan2(y, x)
     
     def drive(self, goal_x, goal_y, goal_th):
         
         time_of_movement = time()
         goal_v = goal_w = float('inf')
+        
         wl, wr, v, w = self.model.velocities()
         x, y, th = x0, y0, th0 = self.model.position()
         
@@ -42,7 +51,11 @@ class Robot(object):
                 break
         
         self.model.brake()
-        return True if (x, y, th) != (x0, y0, th0) else False
+
+        if (x, y, th) == (x0, y0, th0):
+            return False
+        
+        return True
         
     def transform(self, dist, th, alpha=1, beta=1):
         
@@ -73,30 +86,28 @@ class Robot(object):
     def collect(self, grab_dist, alpha):
         
         movement = True
-        distance = self.sensor.read()
-
-        while distance > grab_dist and movement:
-            
-            goal_x, goal_y, goal_th = self.transform(dist=distance, th=0, alpha=alpha)
+        while self.sensor.read() > grab_dist and movement:
+            goal_x, goal_y, goal_th = self.transform(self.sensor.read(), th=0, alpha=alpha)
             movement = self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)
-            distance = self.sensor.read()
 
         self.claw.grab()
 
-        if self.sensor.read() < grab_dist * 1.1:
-            return True
+        if self.sensor.read() > grab_dist * 1.1:
+            self.claw.release()
+            return False
 
-        self.claw.release()
-        return False
+        self.rail.set_position(0.3)
+        
+        return True
     
-    def approach(self, r_m, xbound, ybound, d_lim, alpha, beta, detector):
+    def approach(self, size, xbound, ybound, tgtProx, slwProx, alpha, beta, detector):
         
         movement = True
         goal_x = goal_y = goal_th = None
 
         while movement:
-            dist, th, glob_x, glob_y = self.vision(r_m, detector)
-
+            dist, th, glob_x, glob_y = self.vision(size, detector)
+            
             # undo last movement if ball is lost
             if dist is None and not (goal_x == goal_y == goal_th == None):
                 self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)
@@ -105,49 +116,53 @@ class Robot(object):
             
             # out of bounds or no ball found
             if dist is None or glob_x > xbound or -glob_y > ybound:
-                return False
+                return False, None
 
             # last minute angle correction 
-            dist = 0 if dist < d_lim else dist
+            dist_hat = 0 if dist < tgtProx else dist
 
-            goal_x, goal_y, goal_th = self.transform(dist, th, alpha, beta)
+            # smaller movements at close proximity
+            alpha_hat = alpha / 2 if dist < slwProx else alpha
+
+            goal_x, goal_y, goal_th = self.transform(dist_hat, th, alpha_hat, beta)
             movement = self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)
+
+        return True, dist
+    
+    def deliver(self, height, tgtProx, slwProx, alpha, beta):
+
+        x, y, _ = self.model.position()
+        th = atan2(self.yBox, self.xBox)
+        self.drive(goal_x=x, goal_y=y, goal_th=th)
+        
+        xbound = ybound = float('inf')
+        detector = self.detector.find_box
+        detected, dist= self.approach(height, xbound, ybound, tgtProx, slwProx, alpha, beta, detector)
+
+        if not detected:
+            return False
+
+        self.rail.set_position(1.0)
+        x, y, th = self.transform(dist - 0.002, th=0)
+        self.drive(goal_x=x, goal_y=y, goal_th=th)
+        
+        self.claw.release()  
 
         return True
     
-    # def deliver(self, x, y, height, d_lim, th_lim, alpha, beta):
-
-    #     self.rail.set_position(0.3)
-
-    #     goal_th = atan2(x, y)
-    #     goal_x, goal_y = x * 0.5, y * 0.5
-    #     self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)
-
-    #     inf = 10000
-    #     detected = self.approach(height, inf, inf, d_lim, th_lim, alpha, beta, self.detector.find_box)
-    #     while not detected:
-
-    # def explore(self):
-    
-    def start(self, op_time, r_m, alpha, beta, xbound, ybound, collect_dist, grab_dist):
+    def start(self, onTime, maxCamDist, grabDist, alphaReductionDist, alpha, beta):
         
         start_time = time()
-        while time() - start_time < op_time:
-
-            detected = self.approach(r_m, xbound, ybound, collect_dist, alpha, beta, self.detector.find_ball)
+        while time() - start_time < onTime:
+            
+            detector = self.detector.find_ball
+            detected, dist = self.approach(self.ballRadius, self.xBound, self.yBound, maxCamDist, alphaReductionDist, alpha, beta, detector)
 
             if not detected:
-                self.explore()
                 continue
-                        
-            collected = self.collect(grab_dist, alpha)
-
-            if collected:
-                self.deliver()
-
+            
+            collected = self.collect(grabDist, alpha)
+        
+        
         home = self.home()
         self.drive(*home)
-
-                
-
-
