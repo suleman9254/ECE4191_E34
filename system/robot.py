@@ -1,5 +1,6 @@
+import numpy as np
 from time import time
-from math import cos, sin, atan2
+from math import cos, sin, atan2, pi
 
 class Robot(object):
     def __init__(self, model, controller, planner, claw=None, rail=None, sensor=None, camera=None, detector=None, params=None):
@@ -22,6 +23,7 @@ class Robot(object):
             self.boxHeight = params['boxHeight']
 
         self.timeout = 1
+        self.explore_state = 0
 
     def home(self):
         x, y, _ = self.model.position()
@@ -83,7 +85,17 @@ class Robot(object):
 
         return dist, th, global_x, global_y
     
-    def collect(self, grab_dist, alpha):
+    def simple_collect(self, distance):
+
+        distance = distance - 0.02
+        goal_x, goal_y, goal_th = self.transform(distance, th=0)
+        _ = self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)        
+        
+        self.claw.grab()
+        self.rail.set_position(0.3)
+        return True
+
+    def sensor_collect(self, grab_dist, alpha):
         
         movement = True
         while self.sensor.read() > grab_dist and movement:
@@ -129,7 +141,7 @@ class Robot(object):
 
         return True, dist
     
-    def deliver(self, height, tgtProx, slwProx, alpha, beta):
+    def deliver(self, tgtProx, slwProx, alpha, beta):
 
         x, y, _ = self.model.position()
         th = atan2(self.yBox, self.xBox)
@@ -137,7 +149,7 @@ class Robot(object):
         
         xbound = ybound = float('inf')
         detector = self.detector.find_box
-        detected, dist= self.approach(height, xbound, ybound, tgtProx, slwProx, alpha, beta, detector)
+        detected, dist = self.approach(self.boxHeight, xbound, ybound, tgtProx, slwProx, alpha, beta, detector)
 
         if not detected:
             return False
@@ -148,21 +160,42 @@ class Robot(object):
         
         self.claw.release()  
 
+        x, y, th = x - 0.4, y - 0.4, -th
+        self.drive(goal_x=x, goal_y=y, goal_th=th)
+        self.rail.set_position(0)
+
         return True
     
-    def start(self, onTime, maxCamDist, grabDist, alphaReductionDist, alpha, beta):
+    def explore(self):
+        
+        x, y, th = self.model.position()
+        th = th + 2*pi / 8 if self.explore_state < 8 else th + 2*pi / 16
+
+        self.drive(goal_x=x, goal_y=y, goal_th=th)
+        self.explore_state = self.explore_state + 1
+    
+    def start(self, onTime, maxCamBallDist, maxCamBoxDist, grabDist, alphaReductionDist, alpha, beta):
         
         start_time = time()
         while time() - start_time < onTime:
             
             detector = self.detector.find_ball
-            detected, dist = self.approach(self.ballRadius, self.xBound, self.yBound, maxCamDist, alphaReductionDist, alpha, beta, detector)
+            detected, dist = self.approach(self.ballRadius, self.xBound, self.yBound, maxCamBallDist, alphaReductionDist, alpha, beta, detector)
 
             if not detected:
+                self.explore(); continue
+            
+            self.explore_state = 0
+            collected = self.simple_collect(dist)
+            
+            if not collected:
                 continue
             
-            collected = self.collect(grabDist, alpha)
-        
-        
+            delivered = self.deliver(maxCamBoxDist, alphaReductionDist, alpha, beta)
+            while not delivered:
+                self.explore(); delivered = self.deliver(maxCamBoxDist, alphaReductionDist, alpha, beta)
+            
+            self.explore_state = 0
+
         home = self.home()
         self.drive(*home)

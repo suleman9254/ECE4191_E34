@@ -32,10 +32,15 @@ planner = TentaclePlanner(v, w, steps=5, alpha=1, beta=0.1, dt=dt)
 box_ckpt, ball_ckpt = r'vision/ckpts/boxes.pt', r'vision/ckpts/balls_old.pt'
 camera, detector = Camera(0), YOLODetector(box_ckpt=box_ckpt, ball_ckpt=ball_ckpt, thresh=0.6)
 
-params = {}
+params = {'xBox': 1, 'yBox': -1, 'xBound': 6.4, 'yBound': 4.11, 'ballRadius': 0.0325, 'boxHeight': 0.13}
+robot = Robot(model, controller, planner, claw, rail, ultrasonic, camera, detector, params)
 
-robot = Robot(model, controller, planner, claw, rail, ultrasonic, camera, detector)
+beta = 0.8
+alpha = 0.6
+grabDist = 0.01
+onTime = 10 * 60
+maxCamBallDist = 0.3
+maxCamBoxDist = 0.3 * 2
+alphaReductionDist = 0.6
 
-robot.deliver(x=1, y=-1, height=0.13, d_lim=0.4, alpha=0.3, beta=0.8)
-
-# robot.start(op_time=10*60, r_m=0.0325, alpha=0.6, beta=0.8, xbound=6.4, ybound=4.11, grab_dist=0.01, collect_dist=0.3)
+robot.start(onTime, maxCamBallDist, maxCamBoxDist, grabDist, alphaReductionDist, alpha, beta)
