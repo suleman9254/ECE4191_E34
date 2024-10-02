@@ -2,7 +2,7 @@ from time import sleep
 from gpiozero import Servo
 
 class Claw(object):
-    def __init__(self, pin, off_delay=0.3, exit_delay=1, min_pulse_width=0.0014, max_pulse_width=0.0022, frame_width=0.02):
+    def __init__(self, pin, off_delay=0.3, exit_delay=1, min_pulse_width=0.0009, max_pulse_width=0.0020, frame_width=0.02):
         
         self.servo = Servo(pin=pin, 
                            initial_value=None, 
