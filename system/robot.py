@@ -22,8 +22,9 @@ class Robot(object):
             self.ballRadius = params['ballRadius']
             self.boxHeight = params['boxHeight']
 
-        self.timeout = 1
-        self.explore_state = 0
+        self.exploreState = 0
+        self.driveTimeout = 1
+        self.collectTimeout = 30
 
     def home(self):
         x, y, _ = self.model.position()
@@ -31,7 +32,7 @@ class Robot(object):
     
     def drive(self, goal_x, goal_y, goal_th):
         
-        time_of_movement = time()
+        moveTime = time()
         goal_v = goal_w = float('inf')
         
         wl, wr, v, w = self.model.velocities()
@@ -47,9 +48,9 @@ class Robot(object):
             wl, wr, v, w = self.model.velocities()
             
             if v != 0 or w != 0:
-                time_of_movement = time()
+                moveTime = time()
 
-            if time() - time_of_movement > self.timeout:
+            if time() - moveTime > self.driveTimeout:
                 break
         
         self.model.brake()
@@ -84,36 +85,36 @@ class Robot(object):
             global_x, global_y, _ = self.transform(dist, th)
 
         return dist, th, global_x, global_y
-    
-    def simple_collect(self, distance):
 
-        distance = distance - 0.02
-        goal_x, goal_y, goal_th = self.transform(distance, th=0)
-        _ = self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)        
+    def collect(self, dist, grabDist, alpha):
         
-        self.claw.grab()
-        self.rail.set_position(0.3)
-        return True
+        goal_x, goal_y, goal_th = self.transform(dist - 0.0025, th=0)
+        _ = self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)
 
-    def sensor_collect(self, grab_dist, alpha):
-        
-        movement = True
-        while self.sensor.read() > grab_dist and movement:
-            goal_x, goal_y, goal_th = self.transform(self.sensor.read(), th=0, alpha=alpha)
+        start_time = time()
+        while (currentDist := self.sensor.read()) > grabDist:
+
+            goal_x, goal_y, goal_th = self.transform(currentDist, th=0, alpha=alpha)
             movement = self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)
 
+            lost = self.sensor.read() > currentDist * 1.1
+            timeout = time() - start_time > self.collectTimeout
+            
+            if not movement or lost or timeout:
+                return False
+        
         self.claw.grab()
-
-        if self.sensor.read() > grab_dist * 1.1:
-            self.claw.release()
-            return False
-
-        self.rail.set_position(0.3)
+        if self.sensor.read() > grabDist * 1.1:
+            self.claw.release(); return False
+        
+        self.rail.set_position(0.1)
+        if self.sensor.read() > grabDist * 1.1:
+            self.claw.release(); self.rail.set_position(0); return False
         
         return True
     
-    def approach(self, size, xbound, ybound, tgtProx, slwProx, alpha, beta, detector):
-        
+    def approach(self, size, xbound, ybound, tgtProx, slwProx, angleTolerance, alpha, beta, detector):
+
         movement = True
         goal_x = goal_y = goal_th = None
 
@@ -123,79 +124,89 @@ class Robot(object):
             # undo last movement if ball is lost
             if dist is None and not (goal_x == goal_y == goal_th == None):
                 self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)
-                goal_x = goal_y = goal_th = None
-                continue
+                goal_x = goal_y = goal_th = None; continue
             
             # out of bounds or no ball found
             if dist is None or glob_x > xbound or -glob_y > ybound:
                 return False, None
-
-            # last minute angle correction 
-            dist_hat = 0 if dist < tgtProx else dist
-
+            
+            # early exit condition
+            if dist < tgtProx and abs(th) < angleTolerance:
+                break
+            
             # smaller movements at close proximity
+            beta_hat = 1 if dist < slwProx else beta
             alpha_hat = alpha / 2 if dist < slwProx else alpha
-
-            goal_x, goal_y, goal_th = self.transform(dist_hat, th, alpha_hat, beta)
+            
+            # last minute angle correction 
+            alpha_hat = 0 if dist < tgtProx else alpha_hat
+            
+            goal_x, goal_y, goal_th = self.transform(dist, th, alpha_hat, beta_hat)
             movement = self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)
 
         return True, dist
     
-    def deliver(self, tgtProx, slwProx, alpha, beta):
+    def deliver(self, tgtProx, slwProx, angleTolerance, alpha, beta):
 
         x, y, _ = self.model.position()
         th = atan2(self.yBox, self.xBox)
         self.drive(goal_x=x, goal_y=y, goal_th=th)
-        
+
         xbound = ybound = float('inf')
         detector = self.detector.find_box
-        detected, dist = self.approach(self.boxHeight, xbound, ybound, tgtProx, slwProx, alpha, beta, detector)
+        detected, dist = self.approach(self.boxHeight, xbound, ybound, tgtProx, slwProx, angleTolerance, alpha, beta, detector)
 
-        if not detected:
-            return False
+        while not detected:        
+            self.explore(); detected, dist = self.approach(self.boxHeight, xbound, ybound, tgtProx, slwProx, angleTolerance, alpha, beta, detector)
 
         self.rail.set_position(1.0)
-        x, y, th = self.transform(dist - 0.002, th=0)
+        x, y, th = self.transform(dist, th=0)
         self.drive(goal_x=x, goal_y=y, goal_th=th)
         
         self.claw.release()  
 
-        x, y, th = x - 0.4, y - 0.4, -th
+        x, y = x - 0.4, y + 0.4
         self.drive(goal_x=x, goal_y=y, goal_th=th)
         self.rail.set_position(0)
 
         return True
     
-    def explore(self):
+    def explore(self, reset=False):
+
+        if reset:
+            self.exploreState = 0; return None
         
         x, y, th = self.model.position()
-        th = th + 2*pi / 8 if self.explore_state < 8 else th + 2*pi / 16
+        dec = 2*pi / 8 if self.exploreState < 8 else 2*pi / 16
+        self.drive(goal_x = x, goal_y = y, goal_th = th - dec)
 
-        self.drive(goal_x=x, goal_y=y, goal_th=th)
-        self.explore_state = self.explore_state + 1
+        self.exploreState = self.exploreState + 1
     
-    def start(self, onTime, maxCamBallDist, maxCamBoxDist, grabDist, alphaReductionDist, alpha, beta):
+    def start(self, onTime, maxCamBallDist, maxCamBoxDist, grabDist, boxAngleTolerance, ballAngleTolerance, alphaReductionDist, alpha, beta):
         
         start_time = time()
         while time() - start_time < onTime:
             
             detector = self.detector.find_ball
-            detected, dist = self.approach(self.ballRadius, self.xBound, self.yBound, maxCamBallDist, alphaReductionDist, alpha, beta, detector)
+            detected, dist = self.approach(self.ballRadius, self.xBound, self.yBound, maxCamBallDist, alphaReductionDist, ballAngleTolerance, alpha, beta, detector)
 
             if not detected:
                 self.explore(); continue
+
+            self.explore(reset=True)            
             
-            self.explore_state = 0
-            collected = self.simple_collect(dist)
+            collected = self.collect(dist, grabDist, alpha=alpha/2)
             
             if not collected:
                 continue
             
-            delivered = self.deliver(maxCamBoxDist, alphaReductionDist, alpha, beta)
-            while not delivered:
-                self.explore(); delivered = self.deliver(maxCamBoxDist, alphaReductionDist, alpha, beta)
+            # delivered = self.deliver(maxCamBoxDist, alphaReductionDist, boxAngleTolerance, alpha, beta)
+
+            self.rail.set_position(1)
+            self.claw.release()
+            self.rail.set_position(0)
             
-            self.explore_state = 0
+            self.explore(reset=True)
 
         home = self.home()
         self.drive(*home)

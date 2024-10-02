@@ -18,8 +18,8 @@ max_count = 48 * 75
 motorL = Motor(in1=5, in2=6, enable=13, freq=100, encA=23, encB=24, max_count=max_count)
 motorR = Motor(in1=17, in2=27, enable=22, freq=100, encA=19, encB=26, max_count=max_count)
 
-claw, ultrasonic = Claw(pin=18), None
-rail = Rail(motor_pins=[12, 16, 20, 21], start_pos=0)
+claw, ultrasonic = Claw(pin=18), DistanceSensor()
+rail = Rail(motor_pins=[12, 16, 20, 21], start_pos=0, total_len=160)
 
 encoder_delay = 0.02
 dt = 2 * encoder_delay + 0.00127
@@ -29,18 +29,23 @@ model = DiffDriveModel(motorL=motorL, motorR=motorR, dt=dt, wheel_radius=0.028, 
 v, w = np.arange(-0.2, 0.2, 0.1), np.arange(-0.3, 0.3, 0.1)
 planner = TentaclePlanner(v, w, steps=5, alpha=1, beta=0.1, dt=dt)
 
-box_ckpt, ball_ckpt = r'vision/ckpts/boxes.pt', r'vision/ckpts/balls_old.pt'
+box_ckpt, ball_ckpt = r'vision/ckpts/box_yolo11_new.pt', r'vision/ckpts/balls.pt'
 camera, detector = Camera(0), YOLODetector(box_ckpt=box_ckpt, ball_ckpt=ball_ckpt, thresh=0.6)
 
-params = {'xBox': 1, 'yBox': -1, 'xBound': 6.4, 'yBound': 4.11, 'ballRadius': 0.0325, 'boxHeight': 0.13}
+params = {'xBox': 3, 'yBox': -2.2, 'xBound': 3, 'yBound': 2.2, 'ballRadius': 0.0325, 'boxHeight': 0.13}
 robot = Robot(model, controller, planner, claw, rail, ultrasonic, camera, detector, params)
 
 beta = 0.8
 alpha = 0.6
-grabDist = 0.01
-onTime = 10 * 60
-maxCamBallDist = 0.3
-maxCamBoxDist = 0.3 * 2
 alphaReductionDist = 0.6
 
-robot.start(onTime, maxCamBallDist, maxCamBoxDist, grabDist, alphaReductionDist, alpha, beta)
+grabDist = 0.038
+maxCamBallDist = 0.3
+maxCamBoxDist = 0.6
+
+boxAngleTolerance = 0.2
+ballAngleTolerance = 0
+
+onTime = 5 * 60
+
+robot.start(onTime, maxCamBallDist, maxCamBoxDist, grabDist, boxAngleTolerance, ballAngleTolerance, alphaReductionDist, alpha, beta)
