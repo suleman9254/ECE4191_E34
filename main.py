@@ -23,7 +23,7 @@ rail = Rail(motor_pins=[12, 16, 20, 21], start_pos=0, total_len=160)
 
 encoder_delay = 0.02
 dt = 2 * encoder_delay + 0.010424973
-controller = PIController(Kp=0.05, Ki=0.02, wheel_radius=0.028, wheel_sep=0.22)
+controller = PIController(Kp=0.15, Ki=0.02, wheel_radius=0.028, wheel_sep=0.22)
 model = DiffDriveModel(motorL=motorL, motorR=motorR, dt=dt, wheel_radius=0.028, wheel_sep=0.22, encoder_delay=encoder_delay)
 
 plannerSteps = 5*3
@@ -31,13 +31,13 @@ v, w = np.arange(-0.2, 0.3, 0.025), np.arange(-0.3, 0.3, 0.1)
 planner = TentaclePlanner(v, w, steps=plannerSteps, alpha=1, beta=0.1, dt=dt)
 
 box_ckpt, ball_ckpt = r'vision/ckpts/box_yolo11_new.pt', r'vision/ckpts/balls.pt'
-camera, detector = Camera(0), YOLODetector(box_ckpt=box_ckpt, ball_ckpt=ball_ckpt, thresh=0.6)
+camera, detector = Camera(0), YOLODetector(box_ckpt=box_ckpt, ball_ckpt=ball_ckpt, thresh=0.1)
 
-params = {'xBox': 3, 'yBox': -2.2, 'xBound': 3, 'yBound': 2.2, 'ballRadius': 0.0325, 'boxHeight': 0.13}
+params = {'xBox': 5.48, 'yBox': -4.11, 'xBound': 3, 'yBound': 2.2, 'ballRadius': 0.0325, 'boxHeight': 0.16}
 robot = Robot(model, controller, planner, claw, rail, ultrasonic, camera, detector, params)
 
-beta = 1
-alpha = 1
+beta = 0.8
+alpha = 0.6
 
 grabDist = 0.04
 maxCamBoxDist = 0.6

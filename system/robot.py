@@ -137,6 +137,7 @@ class Robot(object):
             
             # out of bounds or no ball found
             if dist is None or glob_x > xbound or -glob_y > ybound:
+                print(dist)
                 return False, None
             
             # early exit condition
@@ -207,11 +208,11 @@ class Robot(object):
             if not collected:
                 self.reverse(maxCamBallDist); continue
             
-            # delivered = self.deliver(maxCamBoxDist, alphaReductionDist, boxAngleTolerance, alpha, beta)
+            delivered = self.deliver(maxCamBoxDist, alphaReductionDist, boxAngleTolerance, alpha, beta)
 
-            self.rail.set_position(1)
-            self.claw.release()
-            self.rail.set_position(0)
+            # self.rail.set_position(1)
+            # self.claw.release()
+            # self.rail.set_position(0)
             
             self.explore(reset=True)
 
