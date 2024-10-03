@@ -2,6 +2,8 @@ import numpy as np
 from time import time
 from math import cos, sin, atan2, pi
 
+from statistics import mean
+
 class Robot(object):
     def __init__(self, model, controller, planner, claw=None, rail=None, sensor=None, camera=None, detector=None, params=None):
 
@@ -27,11 +29,18 @@ class Robot(object):
         self.collectTimeout = 30
 
     def home(self):
-        x, y, _ = self.model.position()
-        return 0, 0, atan2(y, x)
+        x, y, th = self.model.position()
+        self.drive(goal_x=0, goal_y=0, goal_th=th)
+        
+        th0 = atan2(y, x)
+        self.drive(goal_x=0, goal_y=0, goal_th=th0)
+
+    def reverse(self, dist):
+        x, y, th = self.model.position()
+        self.drive(x - dist, y + dist, th)
     
     def drive(self, goal_x, goal_y, goal_th):
-        
+
         moveTime = time()
         goal_v = goal_w = float('inf')
         
@@ -39,7 +48,7 @@ class Robot(object):
         x, y, th = x0, y0, th0 = self.model.position()
         
         while not v == goal_v == w == goal_w == 0:
-
+            
             goal_v, goal_w = self.planner.plan(goal_x, goal_y, goal_th, x, y, th)
             dutyL, dutyR = self.controller.drive(goal_v, goal_w, wl, wr)
             self.model.pose_update(dutyL, dutyR)
@@ -97,18 +106,18 @@ class Robot(object):
             goal_x, goal_y, goal_th = self.transform(currentDist, th=0, alpha=alpha)
             movement = self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)
 
-            lost = self.sensor.read() > currentDist * 1.1
+            lost = self.sensor.read() > currentDist * 1.2
             timeout = time() - start_time > self.collectTimeout
             
             if not movement or lost or timeout:
-                return False
+                break
         
         self.claw.grab()
-        if self.sensor.read() > grabDist * 1.1:
+        if self.sensor.read() > grabDist * 1.2:
             self.claw.release(); return False
         
         self.rail.set_position(0.1)
-        if self.sensor.read() > grabDist * 1.1:
+        if self.sensor.read() > grabDist * 1.2:
             self.claw.release(); self.rail.set_position(0); return False
         
         return True
@@ -164,9 +173,7 @@ class Robot(object):
         self.drive(goal_x=x, goal_y=y, goal_th=th)
         
         self.claw.release()  
-
-        x, y = x - 0.4, y + 0.4
-        self.drive(goal_x=x, goal_y=y, goal_th=th)
+        self.reverse(slwProx)
         self.rail.set_position(0)
 
         return True
@@ -198,7 +205,7 @@ class Robot(object):
             collected = self.collect(dist, grabDist, alpha=alpha/2)
             
             if not collected:
-                continue
+                self.reverse(maxCamBallDist); continue
             
             # delivered = self.deliver(maxCamBoxDist, alphaReductionDist, boxAngleTolerance, alpha, beta)
 
@@ -208,5 +215,4 @@ class Robot(object):
             
             self.explore(reset=True)
 
-        home = self.home()
-        self.drive(*home)
+        self.home()
