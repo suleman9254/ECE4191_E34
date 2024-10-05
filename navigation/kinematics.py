@@ -16,7 +16,7 @@ class DiffDriveModel(object):
         self.motorR = motorR
     
     def velocities(self):
-        return self.wl, self.wr, self.v, self.w
+        return (self.wl, self.wr), (self.v, self.w)
 
     def position(self):
         return self.x, self.y, self.th
