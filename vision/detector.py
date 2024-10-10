@@ -3,13 +3,14 @@ import numpy as np
 from ultralytics import YOLO
 
 class YOLODetector(object):
-    def __init__(self, box_ckpt, ball_ckpt, thresh):
+    def __init__(self, box_ckpt, ball_ckpt, box_thresh, ball_thresh):
         
-        self.thresh = thresh
+        self.box_thresh = box_thresh
+        self.ball_thresh = ball_thresh
         self.boxNet = YOLO(box_ckpt)
         self.ballNet = YOLO(ball_ckpt)
     
-    def detect(self, frame, model):
+    def detect(self, frame, model, thresh):
         output, confs = [], []
         results = model(frame)
         
@@ -17,7 +18,8 @@ class YOLODetector(object):
             for box in result.boxes:
                 
                 confidence = box.conf[0].item()
-                if confidence >= self.thresh:
+                print(confidence)
+                if confidence >= thresh:
                     confs.append( confidence )
                     output.append( box.xyxy[0] )
         
@@ -25,7 +27,7 @@ class YOLODetector(object):
 
     def find_ball(self, frame):
         centroid, radius = None, None
-        results, _ = self.detect(frame, self.ballNet)
+        results, _ = self.detect(frame, self.ballNet, self.ball_thresh)
         
         if len(results):
             box = max(results, key=lambda x: self._radius(x))
@@ -37,7 +39,7 @@ class YOLODetector(object):
 
     def find_box(self, frame):
         centroid, height = None, None
-        results, confidence = self.detect(frame, self.boxNet)
+        results, confidence = self.detect(frame, self.boxNet, self.box_thresh)
         
         if len(results):
             box = results[ np.argmax(confidence) ]

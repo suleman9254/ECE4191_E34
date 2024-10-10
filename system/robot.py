@@ -26,14 +26,11 @@ class Robot(object):
 
         self.exploreState = 0
         self.driveTimeout = 1
-        self.collectTimeout = 30
+        self.collectTimeout = 10
 
     def home(self):
-        x, y, th = self.model.position()
-        self.drive(goal_x=0, goal_y=0, goal_th=th)
-        
-        th0 = atan2(y, x)
-        self.drive(goal_x=0, goal_y=0, goal_th=th0)
+        x, y, _ = self.model.position()
+        return 0, 0, atan2(-y, -x)
 
     def reverse(self, dist):
         x, y, th = self.model.position()
@@ -47,6 +44,7 @@ class Robot(object):
         wl, wr, v, w = self.model.velocities()
         x, y, th = x0, y0, th0 = self.model.position()
         
+        # planner requested stop and wheels unmoving
         while not v == goal_v == w == goal_w == 0:
             
             goal_v, goal_w = self.planner.plan(goal_x, goal_y, goal_th, x, y, th)
@@ -56,14 +54,18 @@ class Robot(object):
             x, y, th = self.model.position()
             wl, wr, v, w = self.model.velocities()
             
+            # reset moveTime
             if v != 0 or w != 0:
                 moveTime = time()
 
+            # stationary timeout; motors cant drive
             if time() - moveTime > self.driveTimeout:
                 break
         
+        # pin disables
         self.model.brake()
 
+        # check for net displacement
         if (x, y, th) == (x0, y0, th0):
             return False
         
@@ -94,40 +96,13 @@ class Robot(object):
             global_x, global_y, _ = self.transform(dist, th)
 
         return dist, th, global_x, global_y
-
-    def collect(self, dist, grabDist, alpha):
-        
-        goal_x, goal_y, goal_th = self.transform(dist - 0.0025, th=0)
-        _ = self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)
-
-        start_time = time()
-        while (currentDist := self.sensor.read()) > grabDist:
-
-            goal_x, goal_y, goal_th = self.transform(currentDist, th=0, alpha=alpha)
-            movement = self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)
-
-            lost = self.sensor.read() > currentDist * 1.2
-            timeout = time() - start_time > self.collectTimeout
-            
-            if not movement or lost or timeout:
-                break
-        
-        self.claw.grab()
-        if self.sensor.read() > grabDist * 1.2:
-            self.claw.release(); return False
-        
-        self.rail.set_position(0.1)
-        if self.sensor.read() > grabDist * 1.2:
-            self.claw.release(); self.rail.set_position(0); return False
-        
-        return True
     
     def approach(self, size, xbound, ybound, tgtProx, slwProx, angleTolerance, alpha, beta, detector):
-
-        movement = True
-        goal_x = goal_y = goal_th = None
+        
+        movement, goal_x, goal_y, goal_th = True, None, None, None
 
         while movement:
+            
             dist, th, glob_x, glob_y = self.vision(size, detector)
             
             # undo last movement if ball is lost
@@ -137,7 +112,6 @@ class Robot(object):
             
             # out of bounds or no ball found
             if dist is None or glob_x > xbound or -glob_y > ybound:
-                print(dist)
                 return False, None
             
             # early exit condition
@@ -155,6 +129,40 @@ class Robot(object):
             movement = self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)
 
         return True, dist
+    
+    def collect(self, dist, grabDist, alpha):
+        
+        goal_x, goal_y, goal_th = self.transform(dist, th=0)
+        _ = self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)
+
+        start_time = time()
+        while (currentDist := self.sensor.read()) > grabDist:
+
+            goal_x, goal_y, goal_th = self.transform(currentDist, th=0, alpha=alpha)
+            movement = self.drive(goal_x=goal_x, goal_y=goal_y, goal_th=goal_th)
+
+            lost = self.sensor.read() > currentDist * 1.2
+            timeout = time() - start_time > self.collectTimeout
+            
+            if not movement or lost or timeout:
+                break
+        
+        self.claw.grab()
+
+        # check sensor after grabbing
+        if self.sensor.read() > grabDist * 1.2:
+            self.claw.release()
+            return False
+        
+        self.rail.set_position(0.1)
+
+        # check sensor again after rising
+        if self.sensor.read() > grabDist * 1.2:
+            self.claw.release()
+            self.rail.set_position(0)
+            return False
+        
+        return True
     
     def deliver(self, tgtProx, slwProx, angleTolerance, alpha, beta):
 
@@ -208,11 +216,11 @@ class Robot(object):
             if not collected:
                 self.reverse(maxCamBallDist); continue
             
-            delivered = self.deliver(maxCamBoxDist, alphaReductionDist, boxAngleTolerance, alpha, beta)
+            # delivered = self.deliver(maxCamBoxDist, alphaReductionDist, boxAngleTolerance, alpha, beta)
 
-            # self.rail.set_position(1)
-            # self.claw.release()
-            # self.rail.set_position(0)
+            self.rail.set_position(1)
+            self.claw.release()
+            self.rail.set_position(0)
             
             self.explore(reset=True)
 

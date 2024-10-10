@@ -33,10 +33,10 @@ class Robot(object):
         self.drive((0, 0, atan2(-y, -x)))
 
     def reverse(self, dist):
-        x, y, th = self.model.position()
-        self.drive(goal=(x - dist, y + dist, th))
+        goal = self.transform(-dist, th=0)
+        self.drive(goal)
     
-    def drive(self, goal, stallTime=1):
+    def drive(self, goal, stallTime=0.2):
 
         timeout = False
         moveTime, vBaseTgt = time(), (1, 1)
@@ -48,8 +48,14 @@ class Robot(object):
 
             vBaseTgt = self.planner.plan(*goal, *pos)
             duty = self.controller.drive(*vBaseTgt, *vWheel)
-            self.model.pose_update(*duty)
 
+            # bypass controller to brake
+            brake = np.all(vBaseTgt == 0)
+            self.model.brake() if brake else self.model.set_pwm(*duty)
+
+            # update model position
+            self.model.pose_update()
+            
             pos = self.model.position()
             vWheel, vBase = self.model.velocities()
 
@@ -90,7 +96,7 @@ class Robot(object):
     
     def cameraDrive(self, size, tgtProx, thTol, alpha, beta, detector, xBound=inf, yBound=inf):
         
-        movement, goal = True, (None, None, None)
+        movement, goal = True, None
         atDest, (minProx, maxProx) = False, tgtProx
 
         while movement and not atDest:
@@ -98,13 +104,14 @@ class Robot(object):
             dist, th = self.vision(size, detector)
 
             # undo movement if ball got lost
-            wasDetected = goal != (None, None, None)
+            wasDetected = goal != None
             if dist is None and wasDetected: 
-                self.drive(goal); goal = (None, None, None)
-                continue
+                self.drive(goal); goal = None; continue
             
-            # no detection or out of bounds
+            # no detection
             if dist is None: return False
+            
+            # out of bounds
             globX, globY, _ = self.transform(dist, th)
             if globX > xBound or -globY > yBound: return False
             
@@ -133,7 +140,7 @@ class Robot(object):
 
         while shouldRun:
             
-            # read sensor
+            # use the sensor closest to object
             meas = sensor.read(); movDist = np.min(meas)
             x, y, th = self.transform(movDist, th=0, alpha=alpha)
             
@@ -158,7 +165,7 @@ class Robot(object):
     
     def collect(self, grabDist, sensorTimeout, alpha):
         
-        self.sensorDrive(grabDist, alpha, sensorTimeout, self.tof)
+        self.sensorDrive(self.tof, grabDist, alpha, sensorTimeout)
         
         self.claw.grab()
 
@@ -179,38 +186,77 @@ class Robot(object):
         self.rail.set_position(0)
         return False
     
-    def deliver(self, camProx, sonicProx, sensorTimeout, thTol, alpha, beta):
-
-        # drive close to box with odom.
-        x, y, _ = self.model.position()
-        th = atan2(self.yBox, self.xBox)
-        x, y = max(x, self.xBox - 1), min(y, self.yBox + 1)
+    def deliver2(self, deliverDist, sensorTimeout, alpha):
         
+        # drive close to box with odom.
+        x0, y0, _ = self.model.position()
+        th = atan2(self.yBox, self.xBox)
+        x, y = max(x0, self.xBox - 0.7), min(y0, self.yBox + 0.7)
+        
+        self.drive(goal=(x0, y0, th))
         self.drive(goal=(x, y, th))
 
-        # vision to correct angle and approach
-        approached = self.cameraDrive(self.boxHeight, camProx, thTol, alpha, beta, self.detector.find_box)
-        while not approached:
-            self.explore(); approached = self.cameraDrive(self.boxHeight, camProx, thTol, alpha, beta, self.detector.find_box)
-        
+        meas = self.ultrasonic.read()
+        self.drive((x, y, th - 2*pi / 8))
+        newMeas = self.ultrasonic.read()
+        while np.min(newMeas) < np.min(meas):
+            x, y, th = self.model.position()
+            self.drive((x, y, th - 2*pi / 8))
+            
+            meas = newMeas
+            newMeas = self.ultrasonic.read()
+
         self.rail.set_position(1)
 
         # drive close with ultrasonics
-        self.sensorDrive(sonicProx, alpha, sensorTimeout, self.ultrasonic)
+        self.sensorDrive(self.ultrasonic, deliverDist, alpha, sensorTimeout)
 
         # release / reverse
         self.claw.release()
         self.reverse(dist=0.6)
         self.rail.set_position(0)
+        
+        x, y, _ = self.model.position()
+        self.drive((x, y, -atan2(y, x) / 2))
+    
+    
+
+    def deliver(self, camProx, sonicProx, sensorTimeout, thTol, alpha, beta):
+
+        # drive close to box with odom.
+        x0, y0, _ = self.model.position()
+        th = atan2(self.yBox, self.xBox)
+        x, y = max(x0, self.xBox - 0.7), min(y0, self.yBox + 0.7)
+        
+        self.drive(goal=(x0, y0, th)); self.drive(goal=(x, y, th))
+
+        # vision to correct angle and approach
+        start_time = time()
+        approached = self.cameraDrive(self.boxHeight, camProx, thTol, alpha, beta, self.detector.find_box)
+        while not approached and time() - start_time < 30:
+            self.explore(); approached = self.cameraDrive(self.boxHeight, camProx, thTol, alpha, beta, self.detector.find_box)
+        
+        self.rail.set_position(1)
+
+        # drive close with ultrasonics
+        self.sensorDrive(self.ultrasonic, sonicProx, alpha, sensorTimeout)
+
+        # release / reverse
+        self.claw.release()
+        self.reverse(dist=0.6)
+        self.rail.set_position(0)
+        
+        x, y, _ = self.model.position()
+        self.drive((x, y, atan2(y, x) / 2))
 
     def explore(self, reset=False):
 
         if reset: self.exploreState = 5; return None
 
-        x, y, th = self.model.position()
+        (x, y, th) = (x0, y0, th0) = self.model.position()
         
         if self.exploreState < 4:
-            th = th - 2 * pi / 8
+            th = th - 2 * pi / 16
         
         elif self.exploreState < 5:
             th = atan2(self.yBox, self.xBox)
@@ -225,7 +271,7 @@ class Robot(object):
         elif self.exploreState < 30:
             self.exploreState = 6
 
-        self.drive(goal=(x, y, th))
+        self.drive(goal=(x0, y0, th)); self.drive(goal=(x, y, th))
         self.exploreState = self.exploreState + 1
     
     def start(self, onTime, tgtBallProx, tgtBoxProx, thBallTol, thBoxTol, grabDist, deliverDist, alpha, beta, collectSensorTimeout=5, deliverSensorTimeout=inf):
@@ -233,16 +279,22 @@ class Robot(object):
         startTime = time()
         while time() - startTime < onTime:
             
-            detected = self.cameraDrive(self.ballRadius, tgtBallProx, thBallTol, alpha, beta, self.detector.find_ball, self.xBound, self.yBound)
+            try:
+                detected = self.cameraDrive(self.ballRadius, tgtBallProx, thBallTol, alpha, beta, self.detector.find_ball, self.xBound, self.yBound)
 
-            if not detected: self.explore(); continue
-            
-            self.explore(reset=True)
-            collected = self.collect(grabDist, collectSensorTimeout, alpha)
-            
-            _ , revDist = tgtBallProx
-            if not collected: self.reverse(revDist); continue
+                if not detected: self.explore(); continue
+                
+                self.explore(reset=True)
+                collected = self.collect(grabDist, collectSensorTimeout, alpha)
+                
+                _ , revDist = tgtBallProx
+                if not collected: self.reverse(revDist); continue
 
-            self.deliver(tgtBoxProx, deliverDist, deliverSensorTimeout, thBoxTol, alpha, beta)
+                self.deliver(tgtBoxProx, deliverDist, deliverSensorTimeout, thBoxTol, alpha, beta)
+                # self.deliver2(deliverDist, deliverSensorTimeout, alpha)
+                self.explore(reset=True)
+            
+            except KeyboardInterrupt:
+                break
         
         self.home()

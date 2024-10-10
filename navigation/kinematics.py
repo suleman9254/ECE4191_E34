@@ -40,7 +40,6 @@ class DiffDriveModel(object):
         self.motorL.set_pwm(duty_cycle_l)
         self.motorR.set_pwm(duty_cycle_r)
 
-    def pose_update(self, duty_cycle_l, duty_cycle_r):
-        self.set_pwm(duty_cycle_l, duty_cycle_r)
+    def pose_update(self):
         self.update_velocities()
         self.update_position()

@@ -14,6 +14,9 @@ class Camera(object):
         if not self.camera.isOpened():
             raise Exception("Error: Could not open camera.")
         
+        self.camera.set(cv.CAP_PROP_FRAME_WIDTH, 1280)
+        self.camera.set(cv.CAP_PROP_FRAME_HEIGHT, 720)
+
         self.matrix = np.load('vision/calibration/params/camera_matrix.npy')
         self.dist_coeffs = np.load('vision/calibration/params/distortion.npy')
         
